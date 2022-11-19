@@ -1,0 +1,1 @@
+# Gstreamer Plugin Template
