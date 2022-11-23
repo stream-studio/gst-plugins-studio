@@ -10,15 +10,3 @@ cdata.set_quoted('GST_PACKAGE_ORIGIN', 'https://stream.studio')
 
 configure_file(output : 'config.h',
                configuration : cdata)
-
-gstsuperelement_sources = [
-  'superelement/gstsuperelement.c',
-]
-
-gstsuperelement = library('gstsuperelement',
-  gstsuperelement_sources,
-  dependencies : [gst_dep],
-  c_args: plugin_c_args,
-  install : true,
-  install_dir : plugins_install_dir,
-)
