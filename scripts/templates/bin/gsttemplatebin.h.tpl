@@ -12,8 +12,6 @@ struct ${ELEMENT_CLASS_NAME} {
   GstBinClass parent_class;
 };
 
-gboolean ${ELEMENT_FUNCTION_PREFIX}_plugin_init (GstPlugin *plugin);
-
 G_END_DECLS
 
 #endif

@@ -10,3 +10,17 @@ cdata.set_quoted('GST_PACKAGE_ORIGIN', 'https://stream.studio')
 
 configure_file(output : 'config.h',
                configuration : cdata)
+
+streamer_sources = [
+    'streamer/gststreamer.c',
+    'streamer/gststreamerbin.c',
+    'streamer/gststreamerbinmeta.c',
+]
+
+streamer = library('streamer',
+    streamer_sources,
+    dependencies : [gst_dep],
+    c_args: plugin_c_args,
+    install : true,
+    install_dir : plugins_install_dir,
+)

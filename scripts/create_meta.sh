@@ -1,4 +1,4 @@
-if [ $# -eq 0 ]
+if [ $# != 2 ]
   then
     echo "usage ${0} ElementName"
     echo "example : ${0} Streamer"
@@ -8,4 +8,4 @@ fi
 SCRIPT_DIR="$(dirname -- "${BASH_SOURCE[0]}")"
 source $SCRIPT_DIR/common.sh
 
-create_element "$1Meta"
+create_element $1 "$2Meta"

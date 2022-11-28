@@ -1,7 +1,8 @@
 
 create_element () {
   SCRIPT_DIR="$(dirname -- "${BASH_SOURCE[0]}")"
-  export ELEMENT_NAME_CAMEL_CASE=$1
+  export PLUGIN_NAME=$1
+  export ELEMENT_NAME_CAMEL_CASE=$2
   export ELEMENT_NAME_SNAKE_CASE=$(echo $ELEMENT_NAME_CAMEL_CASE \
   | sed 's/\([^A-Z]\)\([A-Z0-9]\)/\1_\2/g' \
   | sed 's/\([A-Z0-9]\)\([A-Z0-9]\)\([^A-Z]\)/\1_\2\3/g' \
@@ -14,7 +15,7 @@ create_element () {
   export ELEMENT_FILENAME="gst${ELEMENT_NAME_LOWER}"
   export ELEMENT_FILENAME_C="$ELEMENT_FILENAME.c"
   export ELEMENT_FILENAME_H="$ELEMENT_FILENAME.h"
-  export ELEMENT_DIRECTORY="$SRC_PATH$ELEMENT_NAME_LOWER"
+  export ELEMENT_DIRECTORY="$SRC_PATH$1"
 
   export ELEMENT_CLASS_NAME="Gst${ELEMENT_NAME_CAMEL_CASE}Class"
   export ELEMENT_OBJECT_NAME="Gst${ELEMENT_NAME_CAMEL_CASE}"
@@ -33,26 +34,13 @@ create_element () {
   echo "Element function prefix : $ELEMENT_FUNCTION_PREFIX"
 
 
-  [ -d $ELEMENT_DIRECTORY ] && echo "Directory exists skipping" && exit
+  [ -f $"$ELEMENT_DIRECTORY/$ELEMENT_FILENAME_C" ] && echo "Dest filename exists skipping" && exit
+  [ -f $"$ELEMENT_DIRECTORY/$ELEMENT_FILENAME_H" ] && echo "Dest filename exists skipping" && exit
 
-  mkdir $ELEMENT_DIRECTORY
   C_FILE_CONTENT=$(cat $SCRIPT_DIR/templates/bin/gsttemplatebin.c.tpl | envsubst)
   H_FILE_CONTENT=$(cat $SCRIPT_DIR/templates/bin/gsttemplatebin.h.tpl | envsubst)
 
   echo "$C_FILE_CONTENT" > "$ELEMENT_DIRECTORY/$ELEMENT_FILENAME_C"
   echo "$H_FILE_CONTENT" > "$ELEMENT_DIRECTORY/$ELEMENT_FILENAME_H"
-
-  echo "
-${ELEMENT_FILENAME}_sources = [
-'$ELEMENT_NAME_LOWER/$ELEMENT_FILENAME_C',
-]
-
-${ELEMENT_FILENAME} = library('${ELEMENT_FILENAME}',
-${ELEMENT_FILENAME}_sources,
-dependencies : [gst_dep],
-c_args: plugin_c_args,
-install : true,
-install_dir : plugins_install_dir,
-)" >> ${SRC_PATH}/meson.build
 
 }
