@@ -1,5 +1,8 @@
 # Gstreamer Plugin Template
 
+![Logo Stream Studio](docs/assets/banner.png)
+
+
 ## Create a custom bin
 
 On the project dir simply start
