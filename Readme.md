@@ -1,6 +1,6 @@
-# Gstreamer Plugin Template
-
 ![Logo Stream Studio](docs/assets/banner.png)
+
+# Gstreamer Plugin Template
 
 
 ## Create a custom bin
@@ -42,12 +42,13 @@ opencv = library('opencv',
     install : true,
     install_dir : plugins_install_dir,
 )
-``
+```
 Then in your plugin file gstopencv.c add include and register plugin
 
 ```
 #include "gstopencvtransform.h"
 ```
+
 
 ```
 gboolean opencv_plugin_init(GstPlugin *plugin)
