@@ -8,4 +8,4 @@ fi
 SCRIPT_DIR="$(dirname -- "${BASH_SOURCE[0]}")"
 source $SCRIPT_DIR/common.sh
 
-create_element $1 "$2Meta"
+create_element $1 "$2Meta" meta/gsttemplatemeta

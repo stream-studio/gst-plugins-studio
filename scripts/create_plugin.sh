@@ -22,7 +22,7 @@ ${PLUGIN_NAME}_sources = [
 '$PLUGIN_NAME/$PLUGIN_C_FILE',
 ]
 
-${PLUGIN_NAME} = library('${PLUGIN_NAME}',
+${PLUGIN_NAME} = library('gst${PLUGIN_NAME}',
     ${PLUGIN_NAME}_sources,
     dependencies : [gst_dep],
     c_args: plugin_c_args,

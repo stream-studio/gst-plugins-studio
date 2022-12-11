@@ -37,8 +37,8 @@ create_element () {
   [ -f $"$ELEMENT_DIRECTORY/$ELEMENT_FILENAME_C" ] && echo "Dest filename exists skipping" && exit
   [ -f $"$ELEMENT_DIRECTORY/$ELEMENT_FILENAME_H" ] && echo "Dest filename exists skipping" && exit
 
-  C_FILE_CONTENT=$(cat $SCRIPT_DIR/templates/bin/gsttemplatebin.c.tpl | envsubst)
-  H_FILE_CONTENT=$(cat $SCRIPT_DIR/templates/bin/gsttemplatebin.h.tpl | envsubst)
+  C_FILE_CONTENT=$(cat $SCRIPT_DIR/templates/$3.c.tpl | envsubst)
+  H_FILE_CONTENT=$(cat $SCRIPT_DIR/templates/$3.h.tpl | envsubst)
 
   echo "$C_FILE_CONTENT" > "$ELEMENT_DIRECTORY/$ELEMENT_FILENAME_C"
   echo "$H_FILE_CONTENT" > "$ELEMENT_DIRECTORY/$ELEMENT_FILENAME_H"
