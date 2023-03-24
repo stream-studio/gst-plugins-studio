@@ -11,3 +11,32 @@ cdata.set_quoted('GST_PACKAGE_ORIGIN', 'https://stream.studio')
 configure_file(output : 'config.h',
                configuration : cdata)
 
+
+
+cameragl_sources = [
+    'cameragl/gstcameragl.c',
+    'cameragl/gstdewarp.c'
+]
+
+cameragl = library('gstcameragl',
+    cameragl_sources,
+    dependencies : [gst_dep],
+    c_args: plugin_c_args,
+    install : true,
+    install_dir : plugins_install_dir,
+)
+
+publish_sources = [
+    'publish/gstpublish.c', 
+    'publish/gstdynamictee.c', 
+    'publish/gstrecordsink.c', 
+    'publish/gststreamsink.c'
+]
+
+publish = library('gstpublish',
+    publish_sources,
+    dependencies : [gst_dep],
+    c_args: plugin_c_args,
+    install : true,
+    install_dir : plugins_install_dir,
+)
