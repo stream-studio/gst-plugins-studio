@@ -72,7 +72,7 @@ meson ..
 Test your plugin
 
 ```
-    GST_PLUGIN_PATH=$(pwd)/src gst-launch-1.0 videotestsrc ! opencvtransform ! fakesink
+    GST_PLUGIN_PATH=$(pwd)/src gst-launch-1.0 gltestsrc is-live=TRUE ! dewarp a=0.328 b=0.339 fx=0.02 fy=0.04 scale=0.343 x=1.003 y=0.999 ! glimagesink
 ```
 
 
