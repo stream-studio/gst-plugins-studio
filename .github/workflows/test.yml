@@ -1,0 +1,20 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - "master"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+      -
+        name: Build and Test
+        run: |
+          docker build -t builder .
+          docker run --rm builder test
+          docker rmi builder
