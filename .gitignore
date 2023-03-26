@@ -1,1 +1,7 @@
 builddir
+debian/.debhelper
+debian/generated
+debian/gstreamer-1.0-plugins-studio
+debian/files
+debian/gstreamer-1.0-plugins-studio.substvars
+debian/debhelper-build-stamp

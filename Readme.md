@@ -77,6 +77,10 @@ Test your plugin
 
 
 # Debian package generation
+
+
 ```
-apt-get install debhelper dh-make
+dh_auto_configure --buildsystem=meson
+pkg-buildpackage -rfakeroot -us -uc -b
 ```
+
