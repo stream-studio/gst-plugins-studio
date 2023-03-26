@@ -1,0 +1,14 @@
+Source: gstreamer1.0-plugins-studio
+Priority: optional
+Maintainer: Ludovic Bouguerra <ludovic.bouguerra@stream.studio>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.0
+Section: libs
+Homepage: https://stream.studio
+Rules-Requires-Root: no
+
+Package: gstreamer1.0-plugins-studio
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}, gstreamer1.0-plugins-base (>=1.20.0), gstreamer1.0-plugins-bad (>=1.20.0)
+Description: Stream Studio Gstreamer Plugins with Dewarp, Recorder, Streamer

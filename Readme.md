@@ -76,5 +76,11 @@ Test your plugin
 ```
 
 
+# Debian package generation
 
+
+```
+dh_auto_configure --buildsystem=meson
+pkg-buildpackage -rfakeroot -us -uc -b
+```
 
