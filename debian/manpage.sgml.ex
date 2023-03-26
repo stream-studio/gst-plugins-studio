@@ -26,8 +26,8 @@ manpage.1: manpage.sgml
   <!ENTITY dhsection   "<manvolnum>SECTION</manvolnum>">
   <!ENTITY dhemail     "<email>ludovic@unknown</email>">
   <!ENTITY dhusername  "ludovic">
-  <!ENTITY dhucpackage "<refentrytitle>Gstreamer-1.0-plugins-studio</refentrytitle>">
-  <!ENTITY dhpackage   "gstreamer-1.0-plugins-studio">
+  <!ENTITY dhucpackage "<refentrytitle>gstreamer1.0-plugins-studio</refentrytitle>">
+  <!ENTITY dhpackage   "gstreamer1.0-plugins-studio">
 
   <!ENTITY debian      "<productname>Debian</productname>">
   <!ENTITY gnu         "<acronym>GNU</acronym>">

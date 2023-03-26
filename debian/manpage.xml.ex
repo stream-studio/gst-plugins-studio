@@ -56,9 +56,9 @@ man(1), man(7), http://www.tldp.org/HOWTO/Man-Page/
   <!ENTITY dhsection   "SECTION">
   <!-- TITLE should be something like "User commands" or similar (see
        http://www.tldp.org/HOWTO/Man-Page/q2.html). -->
-  <!ENTITY dhtitle     "gstreamer-1.0-plugins-studio User Manual">
-  <!ENTITY dhucpackage "Gstreamer-1.0-plugins-studio">
-  <!ENTITY dhpackage   "gstreamer-1.0-plugins-studio">
+  <!ENTITY dhtitle     "gstreamer1.0-plugins-studio User Manual">
+  <!ENTITY dhucpackage "gstreamer1.0-plugins-studio">
+  <!ENTITY dhpackage   "gstreamer1.0-plugins-studio">
 ]>
 
 <refentry>

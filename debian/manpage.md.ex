@@ -1,4 +1,4 @@
-% gstreamer-1.0-plugins-studio(SECTION) | User Commands
+% gstreamer1.0-plugins-studio(SECTION) | User Commands
 %
 % "March 26 2023"
 
@@ -25,24 +25,24 @@
 
 # NAME
 
-gstreamer-1.0-plugins-studio - program to do something
+gstreamer1.0-plugins-studio - program to do something
 
 # SYNOPSIS
 
-**gstreamer-1.0-plugins-studio** **-e** _this_ [**\-\-example=that**] [{**-e** | **\-\-example**} _this_]
+**gstreamer1.0-plugins-studio** **-e** _this_ [**\-\-example=that**] [{**-e** | **\-\-example**} _this_]
                  [{**-e** | **\-\-example**} {_this_ | _that_}]
 
-**gstreamer-1.0-plugins-studio** [{**-h** | *\-\-help**} | {**-v** | **\-\-version**}]
+**gstreamer1.0-plugins-studio** [{**-h** | *\-\-help**} | {**-v** | **\-\-version**}]
 
 # DESCRIPTION
 
-This manual page documents briefly the **gstreamer-1.0-plugins-studio** and **bar** commands.
+This manual page documents briefly the **gstreamer1.0-plugins-studio** and **bar** commands.
 
 This manual page was written for the Debian distribution because the
 original program does not have a manual page. Instead, it has documentation
 in the GNU info(1) format; see below.
 
-**gstreamer-1.0-plugins-studio** is a program that...
+**gstreamer1.0-plugins-studio** is a program that...
 
 # OPTIONS
 
@@ -63,11 +63,11 @@ a complete description, see the **info**(1) files.
 
 /etc/foo.conf
 :   The system-wide configuration file to control the behaviour of
-    gstreamer-1.0-plugins-studio. See **foo.conf**(5) for further details.
+    gstreamer1.0-plugins-studio. See **foo.conf**(5) for further details.
 
 ${HOME}/.foo.conf
 :   The per-user configuration file to control the behaviour of
-    gstreamer-1.0-plugins-studio. See **foo.conf**(5) for further details.
+    gstreamer1.0-plugins-studio. See **foo.conf**(5) for further details.
 
 # ENVIRONMENT
 
@@ -83,7 +83,7 @@ Bad configuration file. Exiting.
 :   The configuration file seems to contain a broken configuration
     line. Use the **\-\-verbose** option, to get more info.
 
-**gstreamer-1.0-plugins-studio** provides some return codes, that can be used in scripts:
+**gstreamer1.0-plugins-studio** provides some return codes, that can be used in scripts:
 
     Code Diagnostic
     0 Program exited successfully.

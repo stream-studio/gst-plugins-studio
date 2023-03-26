@@ -11,28 +11,28 @@ version=4
 
 # HTTP site (basic)
 #http://example.com/downloads.html \
-#  files/gstreamer-1.0-plugins-studio-([\d\.]+)\.tar\.gz debian uupdate
+#  files/gstreamer1.0-plugins-studio-([\d\.]+)\.tar\.gz debian uupdate
 
 # Uncomment to examine an FTP server
-#ftp://ftp.example.com/pub/gstreamer-1.0-plugins-studio-(.*)\.tar\.gz debian uupdate
+#ftp://ftp.example.com/pub/gstreamer1.0-plugins-studio-(.*)\.tar\.gz debian uupdate
 
 # SourceForge hosted projects
-# http://sf.net/gstreamer-1.0-plugins-studio/ gstreamer-1.0-plugins-studio-(.*)\.tar\.gz debian uupdate
+# http://sf.net/gstreamer1.0-plugins-studio/ gstreamer1.0-plugins-studio-(.*)\.tar\.gz debian uupdate
 
 # GitHub hosted projects
 #opts="filenamemangle=s%(?:.*?)?v?(\d[\d.]*)\.tar\.gz%<project>-$1.tar.gz%" \
-#   https://github.com/<user>/gstreamer-1.0-plugins-studio/tags \
+#   https://github.com/<user>/gstreamer1.0-plugins-studio/tags \
 #   (?:.*?/)?v?(\d[\d.]*)\.tar\.gz debian uupdate
 
 # PyPI
-# https://pypi.debian.net/gstreamer-1.0-plugins-studio/gstreamer-1.0-plugins-studio-(.+)\.(?:zip|tgz|tbz|txz|(?:tar\.(?:gz|bz2|xz)))
+# https://pypi.debian.net/gstreamer1.0-plugins-studio/gstreamer1.0-plugins-studio-(.+)\.(?:zip|tgz|tbz|txz|(?:tar\.(?:gz|bz2|xz)))
 
 # Direct Git
-# opts="mode=git" http://git.example.com/gstreamer-1.0-plugins-studio.git \
+# opts="mode=git" http://git.example.com/gstreamer1.0-plugins-studio.git \
 #   refs/tags/v([\d\.]+) debian uupdate
 
 
 
 
 # Uncomment to find new files on GooglePages
-# http://example.googlepages.com/foo.html gstreamer-1.0-plugins-studio-(.*)\.tar\.gz
+# http://example.googlepages.com/foo.html gstreamer1.0-plugins-studio-(.*)\.tar\.gz

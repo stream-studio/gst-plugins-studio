@@ -4,7 +4,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH Gstreamer-1.0-plugins-studio SECTION "March 26 2023"
+.TH gstreamer1.0-plugins-studio SECTION "March 26 2023"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -18,16 +18,16 @@
 .\" .sp <n>    insert n+1 empty lines
 .\" for manpage-specific macros, see man(7)
 .SH NAME
-gstreamer-1.0-plugins-studio \- program to do something
+gstreamer1.0-plugins-studio \- program to do something
 .SH SYNOPSIS
-.B gstreamer-1.0-plugins-studio
+.B gstreamer1.0-plugins-studio
 .RI [ options ] " files" ...
 .br
 .B bar
 .RI [ options ] " files" ...
 .SH DESCRIPTION
 This manual page documents briefly the
-.B gstreamer-1.0-plugins-studio
+.B gstreamer1.0-plugins-studio
 and
 .B bar
 commands.
@@ -35,7 +35,7 @@ commands.
 .\" TeX users may be more comfortable with the \fB<whatever>\fP and
 .\" \fI<whatever>\fP escape sequences to invode bold face and italics,
 .\" respectively.
-\fBgstreamer-1.0-plugins-studio\fP is a program that...
+\fBgstreamer1.0-plugins-studio\fP is a program that...
 .SH OPTIONS
 These programs follow the usual GNU command line syntax, with long
 options starting with two dashes (`-').

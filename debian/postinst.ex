@@ -1,5 +1,5 @@
 #!/bin/sh
-# postinst script for gstreamer-1.0-plugins-studio
+# postinst script for gstreamer1.0-plugins-studio
 #
 # see: dh_installdeb(1)
 

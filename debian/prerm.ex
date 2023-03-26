@@ -1,5 +1,5 @@
 #!/bin/sh
-# prerm script for gstreamer-1.0-plugins-studio
+# prerm script for gstreamer1.0-plugins-studio
 #
 # see: dh_installdeb(1)
 
