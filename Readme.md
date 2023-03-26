@@ -76,5 +76,7 @@ Test your plugin
 ```
 
 
-
-
+# Debian package generation
+```
+apt-get install debhelper dh-make
+```

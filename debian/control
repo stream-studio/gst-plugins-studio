@@ -1,0 +1,8 @@
+Source: gstreamer-1.0-plugins-studio
+Priority: optional
+Maintainer: Ludovic Bouguerra <ludovic.bouguerra@stream.studio>
+Build-Depends: debhelper-compat (= 13), libgstreamer1.0-0 (>= 1.20.0), libgstreamer-gl1.0-0 (>= 1.20.0), gstreamer1.0-plugins-base (>= 1.20.0), gstreamer1.0-plugins-bad (>= 1.20.0), gstreamer1.0-gl (>= 1.20.0)
+Standards-Version: 4.6.0
+Section: libs
+Homepage: https://stream.studio
+Rules-Requires-Root: no
