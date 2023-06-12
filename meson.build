@@ -1,4 +1,4 @@
-project('gstreamer-plugin-template', 'c', version : '1', license : 'LGPL')
+project('gstreamer-plugin-studio', 'c', version : '1', license : 'LGPL')
 
 plugins_install_dir = join_paths(get_option('libdir'), 'gstreamer-1.0')
 

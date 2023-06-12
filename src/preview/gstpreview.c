@@ -3,23 +3,14 @@
 #endif
 
 #include <gst/gst.h>
-#include "gstdynamictee.h"
-#include "gstrecordsink.h"
-#include "gststreamsink.h"
+#include "gstpreviewsink.h"
 
-gboolean publish_plugin_init(GstPlugin *plugin)
+gboolean preview_plugin_init(GstPlugin *plugin)
 {
-    gst_element_register(plugin, "dynamictee",
-                              GST_RANK_NONE,
-                              GST_TYPE_DYNAMIC_TEE);
 
-    gst_element_register(plugin, "recordsink",
+    gst_element_register(plugin, "previewsink",
                               GST_RANK_NONE,
-                              GST_TYPE_RECORD_SINK);
-
-    gst_element_register(plugin, "streamsink",
-                              GST_RANK_NONE,
-                              GST_TYPE_STREAM_SINK);                              
+                              GST_TYPE_PREVIEW_SINK);     
 
     return TRUE;
 }
@@ -30,7 +21,7 @@ gboolean publish_plugin_init(GstPlugin *plugin)
  * compile this code. GST_PLUGIN_DEFINE needs PACKAGE to be defined.
  */
 #ifndef PACKAGE
-#define PACKAGE "gstpublish"
+#define PACKAGE "gstpreview"
 #endif
 
 /* gstreamer looks for this structure to register trackers
@@ -40,9 +31,9 @@ gboolean publish_plugin_init(GstPlugin *plugin)
 GST_PLUGIN_DEFINE (
     GST_VERSION_MAJOR,
     GST_VERSION_MINOR,
-    publish,
-    "publish",
-    publish_plugin_init,
+    preview,
+    "preview",
+    preview_plugin_init,
     PACKAGE_VERSION,
     "LGPL",
     "StreamStudio",

@@ -19,6 +19,10 @@ enum
 
 static guint gst_dynamic_tee_signals[LAST_SIGNAL] = {0};
 
+
+GST_DEBUG_CATEGORY_STATIC (gst_preview_sink_debug); 
+#define GST_CAT_DEFAULT gst_preview_sink_debug
+
 #define gst_dynamic_tee_parent_class parent_class
 
 
@@ -191,6 +195,10 @@ static void gst_dynamic_tee_class_init(GstDynamicTeeClass *klass)
                     g_cclosure_new(G_CALLBACK(gst_dynamic_tee_stop), NULL, NULL),
                     NULL, NULL, NULL, G_TYPE_BOOLEAN,
                     1, tee_params);      
+
+  GST_DEBUG_CATEGORY_INIT (gst_preview_sink_debug, "dynamictee", 0,
+      "dynamictee");
+
 
   gst_element_class_set_static_metadata(element_class,
                                         "DynamicTee",

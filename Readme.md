@@ -75,7 +75,27 @@ Test your plugin
     GST_PLUGIN_PATH=$(pwd)/src gst-launch-1.0 gltestsrc is-live=TRUE ! dewarp a=0.328 b=0.339 fx=0.02 fy=0.04 scale=0.343 x=1.003 y=0.999 ! glimagesink
 ```
 
+## Dynamic tee usage 
 
+
+```
+    gboolean result;
+    g_signal_emit_by_name(receiver_entry->parent->tee, "start", receiver_bin, &result);
+```
+
+```
+    gboolean result;
+    g_signal_emit_by_name(receiver_entry->parent->tee, "stop", receiver_bin, &result);
+```
+
+
+## Preview Sink usage
+
+Preview sink allows you to preview video stream on webrtc server
+
+```
+    GST_PLUGIN_PATH=$(pwd)/src gst-launch-1.0 videotestsrc is-live=TRUE ! x264enc key-int-max=50 ! h264parse ! previewsink name=p audiotestsrc is-live=TRUE ! opusenc ! p.
+```
 # Debian package generation
 
 
