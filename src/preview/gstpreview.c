@@ -3,10 +3,17 @@
 #endif
 
 #include <gst/gst.h>
+#include "gstwebrtcsink.h"
 #include "gstpreviewsink.h"
+
 
 gboolean preview_plugin_init(GstPlugin *plugin)
 {
+
+
+    gst_element_register(plugin, "webrtcsink",
+                              GST_RANK_NONE,
+                              GST_TYPE_WEBRTC_SINK);     
 
     gst_element_register(plugin, "previewsink",
                               GST_RANK_NONE,

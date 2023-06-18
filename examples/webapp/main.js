@@ -2,6 +2,7 @@ class Preview{
 
     constructor(element){
         this.element = element;
+        
         this.peerconnection = new RTCPeerConnection();
     }
     
@@ -9,7 +10,8 @@ class Preview{
 
 document.addEventListener("DOMContentLoaded", function() {
     const videoElement = document.getElementById("video");
-    const peerconnection = new RTCPeerConnection();
+    const configuration = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]};
+    const peerconnection = new RTCPeerConnection(configuration);
 
 
     const websocket = new WebSocket("ws://localhost:9000/ws")

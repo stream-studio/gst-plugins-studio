@@ -49,6 +49,7 @@ webrtc_dep = dependency('gstreamer-webrtc-1.0')
 sdp_dep = dependency('gstreamer-sdp-1.0')
 
 preview_sources = [
+    'preview/gstwebrtcsink.c',
     'preview/gstpreviewsink.c',
     'preview/gstpreview.c',
 ]

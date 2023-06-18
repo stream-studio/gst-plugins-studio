@@ -1,0 +1,19 @@
+{
+    "files.associations": {
+        "string": "cpp",
+        "config.h": "c",
+        "hash_map": "c",
+        "array": "c",
+        "string_view": "c",
+        "system_error": "c",
+        "gststreamsink.h": "c",
+        "functional": "c",
+        "chrono": "c",
+        "compare": "c",
+        "memory_resource": "c",
+        "ratio": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c"
+    }
+}

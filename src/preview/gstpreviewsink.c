@@ -55,13 +55,13 @@ struct _GstPreviewSink
 typedef struct{
   SoupWebsocketConnection *connection;
   GstElement* bin;
-  GstElement* webrtcbin;
   GstPreviewSink* parent;
 } PreviewSinkReceiverEntry;
 
 
 G_DEFINE_TYPE(GstPreviewSink, gst_preview_sink, GST_TYPE_BIN);
 
+void play_receiver_entry (PreviewSinkReceiverEntry * receiver_entry);
 
 static gchar *
 get_string_from_json_object (JsonObject * object)
@@ -159,10 +159,7 @@ soup_websocket_message_cb (G_GNUC_UNUSED SoupWebsocketConnection * connection,
 
     const gchar *sdp_type_string;
     const gchar *sdp_string;
-    GstPromise *promise;
-    GstSDPMessage *sdp;
-    GstWebRTCSessionDescription *answer;
-    int ret;
+    gboolean ret;
 
     if (!json_object_has_member (data_json_object, "type")) {
       GST_DEBUG ("Received SDP message without type field\n");
@@ -182,31 +179,16 @@ soup_websocket_message_cb (G_GNUC_UNUSED SoupWebsocketConnection * connection,
     }
     sdp_string = json_object_get_string_member (data_json_object, "sdp");
 
-    GST_DEBUG ("Received SDP:\n%s\n", sdp_string);
 
-    ret = gst_sdp_message_new (&sdp);
-    g_assert_cmphex (ret, ==, GST_SDP_OK);
+    g_signal_emit_by_name (receiver_entry->bin, "set-sdp-answer", sdp_type_string, sdp_string, &ret);
 
-    ret =
-        gst_sdp_message_parse_buffer ((guint8 *) sdp_string,
-        strlen (sdp_string), sdp);
-    if (ret != GST_SDP_OK) {
-      GST_DEBUG ("Could not parse SDP string\n");
-      goto cleanup;
-    }
-
-    answer = gst_webrtc_session_description_new (GST_WEBRTC_SDP_TYPE_ANSWER,
-        sdp);
-    g_assert_nonnull (answer);
-
-    promise = gst_promise_new ();
-    g_signal_emit_by_name (receiver_entry->webrtcbin, "set-remote-description",
-        answer, promise);
-    gst_promise_interrupt (promise);
-    gst_promise_unref (promise);
   } else if (g_strcmp0 (action_string, "ice") == 0) {
     guint mline_index;
     const gchar *candidate_string;
+    if (!data_json_object){
+      GST_DEBUG("Ice action MUST contain params with Ice message");
+      goto cleanup;
+    }
 
     if (!json_object_has_member (data_json_object, "sdpMLineIndex")) {
       GST_DEBUG ("Received ICE message without mline index\n");
@@ -219,14 +201,15 @@ soup_websocket_message_cb (G_GNUC_UNUSED SoupWebsocketConnection * connection,
       GST_DEBUG ("Received ICE message without ICE candidate string\n");
       goto cleanup;
     }
-    candidate_string = json_object_get_string_member (data_json_object,
-        "candidate");
+    candidate_string = g_strdup(json_object_get_string_member (data_json_object,
+        "candidate"));
 
     g_print ("Received ICE candidate with mline index %u; candidate: %s\n",
         mline_index, candidate_string);
 
-    g_signal_emit_by_name (receiver_entry->webrtcbin, "add-ice-candidate",
-        mline_index, candidate_string);
+    gboolean ret;
+    g_signal_emit_by_name (receiver_entry->bin, "add-ice-candidate", mline_index, candidate_string, &ret);
+
   } else
     goto unknown_message;
 
@@ -247,56 +230,40 @@ destroy_receiver_entry (gpointer receiver_entry_ptr)
   PreviewSinkReceiverEntry *receiver_entry = (PreviewSinkReceiverEntry *) receiver_entry_ptr;
   GST_DEBUG("Releasing receiver entry %p, %p", receiver_entry_ptr, receiver_entry->connection);
 
-  g_assert (receiver_entry != NULL);
+  if (receiver_entry != NULL){
+    if (receiver_entry->connection != NULL){
+      GST_DEBUG("Connection is not null releasing %p, %p", receiver_entry_ptr, receiver_entry->connection);
+      g_object_unref (G_OBJECT (receiver_entry->connection));
+    }
+    
+    if (receiver_entry->bin != NULL){
+      GST_DEBUG("Receiver entry is not null releasing %p, %p", receiver_entry_ptr, receiver_entry->connection);
 
-  if (receiver_entry->connection != NULL)
-    GST_DEBUG("Connection is not null releasing %p, %p", receiver_entry_ptr, receiver_entry->connection);
-    g_object_unref (G_OBJECT (receiver_entry->connection));
+      gboolean result;
+      g_signal_emit_by_name(receiver_entry->parent->tee, "stop", receiver_entry->bin, &result);
+    }
 
-  if (receiver_entry->bin != NULL){
-    GST_DEBUG("Receiver entry is not null releasing %p, %p", receiver_entry_ptr, receiver_entry->connection);
-
-    gboolean result;
-    g_signal_emit_by_name(receiver_entry->parent->tee, "stop", receiver_entry->bin, &result);
+    g_slice_free1 (sizeof (PreviewSinkReceiverEntry), receiver_entry);
   }
 
-  g_slice_free1 (sizeof (PreviewSinkReceiverEntry), receiver_entry);
 }
 
 
-static void
-on_offer_created_cb (GstPromise * promise, gpointer user_data)
+static void gst_preview_sink_on_sdp_offer (GstElement* webrtc, gchar* type, gchar *sdp, gpointer user_data)
 {
   GST_DEBUG("SDP Generated");
-  gchar *sdp_string;
   gchar *json_string;
   JsonObject *sdp_json;
   JsonObject *sdp_data_json;
-  GstStructure const *reply;
-  GstPromise *local_desc_promise;
-  GstWebRTCSessionDescription *offer = NULL;
+  
   PreviewSinkReceiverEntry *receiver_entry = (PreviewSinkReceiverEntry *) user_data;
-
-  reply = gst_promise_get_reply (promise);
-  gst_structure_get (reply, "offer", GST_TYPE_WEBRTC_SESSION_DESCRIPTION,
-      &offer, NULL);
-  gst_promise_unref (promise);
-
-  local_desc_promise = gst_promise_new ();
-  g_signal_emit_by_name (receiver_entry->webrtcbin, "set-local-description",
-      offer, local_desc_promise);
-  gst_promise_interrupt (local_desc_promise);
-  gst_promise_unref (local_desc_promise);
-
-  sdp_string = gst_sdp_message_as_text (offer->sdp);
-  g_print ("Negotiation offer created:\n%s\n", sdp_string);
 
   sdp_json = json_object_new ();
   json_object_set_string_member (sdp_json, "action", "sdp");
 
   sdp_data_json = json_object_new ();
-  json_object_set_string_member (sdp_data_json, "type", "offer");
-  json_object_set_string_member (sdp_data_json, "sdp", sdp_string);
+  json_object_set_string_member (sdp_data_json, "type", type);
+  json_object_set_string_member (sdp_data_json, "sdp", sdp);
   json_object_set_object_member (sdp_json, "params", sdp_data_json);
 
   json_string = get_string_from_json_object (sdp_json);
@@ -304,28 +271,11 @@ on_offer_created_cb (GstPromise * promise, gpointer user_data)
 
   soup_websocket_connection_send_text (receiver_entry->connection, json_string);
   g_free (json_string);
-  g_free (sdp_string);
 
-  gst_webrtc_session_description_free (offer);
-}
-
-void
-on_negotiation_needed_cb (GstElement * webrtcbin, gpointer user_data)
-{
-  GstPromise *promise;
-  PreviewSinkReceiverEntry *receiver_entry = (PreviewSinkReceiverEntry *) user_data;
-  GST_DEBUG("Negociation needed for receiver entry");
-  g_print ("Creating negotiation offer\n");
-
-  promise = gst_promise_new_with_change_func (on_offer_created_cb,
-      (gpointer) receiver_entry, NULL);
-  g_signal_emit_by_name (G_OBJECT (webrtcbin), "create-offer", NULL, promise);
 }
 
 
-
-void
-on_ice_candidate_cb (G_GNUC_UNUSED GstElement * webrtcbin, guint mline_index,
+static void gst_preview_sink_on_ice_candidate (G_GNUC_UNUSED GstElement * webrtcbin, guint mline_index,
     gchar * candidate, gpointer user_data)
 {
   JsonObject *ice_json;
@@ -351,61 +301,21 @@ on_ice_candidate_cb (G_GNUC_UNUSED GstElement * webrtcbin, guint mline_index,
 void play_receiver_entry (PreviewSinkReceiverEntry * receiver_entry){
     
     GST_DEBUG("Creating ressources for PLAYING");
+    GstElement *sender_bin = gst_element_factory_make("webrtcsink", NULL);
+    // TODO - receive STUN + TURN from peer
+    g_object_set(sender_bin, "stun-server", "stun://stun.l.google.com:19302", NULL);
+    //g_object_set(sender_bin, "turn-server", NULL, NULL);
+    receiver_entry->bin = sender_bin;
 
-    GstElement *receiver_bin = gst_bin_new(NULL);
-    
-    GstElement *aqueue = gst_element_factory_make("queue", "qvideo");
-    g_object_set(aqueue, "leaky", TRUE, NULL);
+    g_signal_connect (receiver_entry->bin, "on-sdp-offer",
+        G_CALLBACK (gst_preview_sink_on_sdp_offer), (gpointer) receiver_entry);
 
-    GstElement *vqueue = gst_element_factory_make("queue", "qaudio");
-    g_object_set(vqueue, "leaky", TRUE, NULL);
-    
-    GstElement *h264parse = gst_element_factory_make("h264parse", "h264parse");
-    GstElement *opusparse = gst_element_factory_make("opusparse", "opusparse");
+    g_signal_connect (receiver_entry->bin, "on-ice-candidate",
+        G_CALLBACK (gst_preview_sink_on_ice_candidate), (gpointer) receiver_entry);
 
-    GstElement *rtph264pay = gst_element_factory_make("rtph264pay", "rtph264pay");
-
-    GstElement *rtpopuspay = gst_element_factory_make("rtpopuspay", "opuspay");
-    g_object_set(rtpopuspay, "payload", 127, NULL);
-    receiver_entry->webrtcbin = gst_element_factory_make("webrtcbin", NULL);
-    receiver_entry->bin = receiver_bin;
-
-
-    gst_bin_add_many(GST_BIN(receiver_bin), aqueue, opusparse, rtpopuspay,
-                                            vqueue, h264parse, rtph264pay,
-                                            receiver_entry->webrtcbin, 
-                                            NULL);
-
-    gst_element_link_many(vqueue, h264parse, rtph264pay, receiver_entry->webrtcbin, NULL);
-    gst_element_link_many(aqueue, opusparse, rtpopuspay, receiver_entry->webrtcbin, NULL);
-
-    GstWebRTCRTPTransceiver *trans;
-    GArray *transceivers;
-    g_signal_emit_by_name (receiver_entry->webrtcbin, "get-transceivers",
-          &transceivers);
-
-    for (int i=0; i<transceivers->len; i++){
-        trans = g_array_index (transceivers, GstWebRTCRTPTransceiver *, i);
-        g_object_set (trans, "direction",
-            GST_WEBRTC_RTP_TRANSCEIVER_DIRECTION_SENDONLY, NULL);
-    }
-
-    g_signal_connect (receiver_entry->webrtcbin, "on-negotiation-needed",
-        G_CALLBACK (on_negotiation_needed_cb), (gpointer) receiver_entry);
-
-    g_signal_connect (receiver_entry->webrtcbin, "on-ice-candidate",
-        G_CALLBACK (on_ice_candidate_cb), (gpointer) receiver_entry);
-
-    GstPad *pad = gst_element_get_static_pad(aqueue, "sink");
-    gst_element_add_pad(receiver_bin, gst_ghost_pad_new("audio_sink", pad));
-    gst_object_unref(GST_OBJECT(pad));
-
-    pad = gst_element_get_static_pad(vqueue, "sink");
-    gst_element_add_pad(receiver_bin, gst_ghost_pad_new("video_sink", pad));
-    gst_object_unref(GST_OBJECT(pad));
 
     gboolean result;
-    g_signal_emit_by_name(receiver_entry->parent->tee, "start", receiver_bin, &result);
+    g_signal_emit_by_name(receiver_entry->parent->tee, "start", sender_bin, &result);
 
 }
 
@@ -413,13 +323,11 @@ void play_receiver_entry (PreviewSinkReceiverEntry * receiver_entry){
 PreviewSinkReceiverEntry *
 create_receiver_entry (GstPreviewSink *self, SoupWebsocketConnection * connection)
 {
-  GError *error;
   PreviewSinkReceiverEntry *receiver_entry;
 
   receiver_entry = g_slice_alloc0 (sizeof (PreviewSinkReceiverEntry));
   receiver_entry->parent = self;
   receiver_entry->connection = connection;
-  receiver_entry->webrtcbin = NULL;
   receiver_entry->bin = NULL;
 
   g_object_ref (G_OBJECT (connection));
@@ -427,13 +335,7 @@ create_receiver_entry (GstPreviewSink *self, SoupWebsocketConnection * connectio
   g_signal_connect (G_OBJECT (connection), "message",
       G_CALLBACK (soup_websocket_message_cb), (gpointer) receiver_entry);
 
-  error = NULL;
-
   return receiver_entry;
-
-cleanup:
-  destroy_receiver_entry ((gpointer) receiver_entry);
-  return NULL;
 }
 
 
@@ -499,7 +401,7 @@ static void gst_preview_sink_init(GstPreviewSink *self)
   gst_element_link_many(self->aqueue, self->opusparse, self->tee, NULL);
 
 
-  self->host = g_strdup_printf("%s", DEFAULT_HOST);;
+  self->host = g_strdup_printf("%s", DEFAULT_HOST);
   self->port = DEFAULT_PORT;
 
   GstPad *pad = gst_element_get_static_pad(self->aqueue, "sink");
