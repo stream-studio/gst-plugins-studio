@@ -10,7 +10,8 @@ gboolean cameragl_plugin_init(GstPlugin *plugin)
 
     gst_element_register(plugin, "dewarp",
                               GST_RANK_NONE,
-                              GST_TYPE_DEWARP);                          
+                              GST_TYPE_DEWARP);       
+                      
     return TRUE;
 }
 

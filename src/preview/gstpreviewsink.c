@@ -362,6 +362,8 @@ soup_websocket_handler (G_GNUC_UNUSED SoupServer * server,
 
 static gboolean gst_preview_sink_start_server(GstPreviewSink *self){
 
+  GST_INFO ("Libsoup server now listening for connections");
+
   self->soup_server = soup_server_new (SOUP_SERVER_SERVER_HEADER, "webrtc-soup-server", NULL);
       
   soup_server_add_websocket_handler (self->soup_server, "/ws", NULL, NULL,
@@ -389,6 +391,9 @@ static void gst_preview_sink_init(GstPreviewSink *self)
   self->aqueue = gst_element_factory_make("queue", "aqueue");
   self->vqueue = gst_element_factory_make("queue", "vqueue");
   
+  g_object_set(self->aqueue, "leaky", 2, NULL);
+  g_object_set(self->vqueue, "leaky", 2, NULL);
+
   self->h264parse = gst_element_factory_make("h264parse", "vparse");
   self->opusparse = gst_element_factory_make("opusparse", "aparse");
 

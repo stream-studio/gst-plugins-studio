@@ -34,7 +34,7 @@
 #define MIN_Y 0.0
 #define MAX_Y 2.0 
 
-const gchar* vertex_shader = 
+static const gchar* vertex_shader = 
       "#version 100\n"
       "attribute vec4 a_position;\n"
       "attribute vec2 a_texcoord;\n"
@@ -49,7 +49,7 @@ const gchar* vertex_shader =
       "}\n";
 
 
-const gchar* fragment_shader = 
+static const gchar* fragment_shader = 
 "#version 100\n" 
 "#ifdef GL_ES\n"
 " precision mediump float;\n"
