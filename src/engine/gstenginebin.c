@@ -67,7 +67,7 @@ static void gst_engine_bin_init(GstEngineBin *self)
   self->atee = gst_element_factory_make("tee", "atee");
 
   self->vencoder = gst_element_factory_make("x264enc", "vencoder");
-  g_object_set(self->vencoder, "tune", 0x00004, "key-int-max", 60, NULL);
+  g_object_set(self->vencoder, "bitrate", 1000, "tune", 0x00004, "key-int-max", 60, NULL);
 
 
   self->venctee = gst_element_factory_make("tee", "venctee");

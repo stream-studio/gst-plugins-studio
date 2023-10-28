@@ -60,12 +60,15 @@ static void gst_stream_sink_init(GstStreamSink *self)
   
   self->aqueue = gst_element_factory_make("queue", "aqueue");
   self->vqueue = gst_element_factory_make("queue", "vqueue");
+  g_object_set(self->aqueue, "leaky", 2, NULL);
+  g_object_set(self->vqueue, "leaky", 2, NULL);
   
   self->h264parse = gst_element_factory_make("h264parse", "vparse");
   self->aacparse = gst_element_factory_make("aacparse", "aparse");
 
   self->flvmux = gst_element_factory_make("flvmux", "mux");
   self->rtmpsink = gst_element_factory_make("rtmp2sink", "sink");
+  g_object_set(self->rtmpsink, "sync", FALSE, NULL);
 
   gst_bin_add_many(GST_BIN(bin), self->vqueue, self->h264parse, self->aqueue, self->aacparse, self->flvmux, self->rtmpsink, NULL);
   gst_element_link_many(self->aqueue, self->aacparse, self->flvmux, self->rtmpsink, NULL);

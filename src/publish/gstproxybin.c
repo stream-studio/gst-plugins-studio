@@ -92,12 +92,26 @@ static void gst_proxy_bin_init(GstProxyBin *self)
   
   self->child = NULL;
 
+
+
   self->pipeline = gst_pipeline_new(NULL);
+
+
+
   self->bus = gst_pipeline_get_bus(GST_PIPELINE(self->pipeline));
   gst_bus_add_watch (self->bus, bus_callback, self);
 
+  GstClock *clock = gst_system_clock_obtain ();
+  gst_pipeline_use_clock (GST_PIPELINE (self->pipeline), clock);
+  gst_object_unref(clock);
+  gst_element_set_base_time (self->pipeline, 0);
+
   self->aqueue = gst_element_factory_make("queue", "aqueue");
   self->vqueue = gst_element_factory_make("queue", "vqueue");
+  g_object_set(self->aqueue, "leaky", 2, NULL);
+  g_object_set(self->vqueue, "leaky", 2, NULL);
+
+
 
   self->asink = gst_element_factory_make("proxysink", "asink");
   self->vsink = gst_element_factory_make("proxysink", "vsink");
@@ -140,17 +154,16 @@ static GstStateChangeReturn gst_proxy_bin_change_state(GstElement *element, GstS
       gst_bin_add(GST_BIN(self->pipeline), self->child);
       
       GST_DEBUG("Adding child in subpipeline"); 
-      gst_element_sync_state_with_parent(self->child);
 
       g_object_set(self->asrc, "proxysink", self->asink, NULL);
       g_object_set(self->vsrc, "proxysink", self->vsink, NULL);
 
+      gst_element_sync_state_with_parent(self->child);
+
       gst_element_link_pads(self->asrc, "src", self->child, "audio_sink");
       gst_element_link_pads(self->vsrc, "src", self->child, "video_sink");
-
-      GstClockTime time = gst_element_get_base_time(GST_ELEMENT_PARENT(self));
-      gst_element_set_base_time (self->pipeline, time);
       
+
       gst_element_set_state(self->pipeline, GST_STATE_PLAYING);
 	  break;
 	default:
