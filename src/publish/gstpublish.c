@@ -3,12 +3,18 @@
 #endif
 
 #include <gst/gst.h>
+#include "gstproxybin.h"
 #include "gstdynamictee.h"
 #include "gstrecordsink.h"
 #include "gststreamsink.h"
 
 gboolean publish_plugin_init(GstPlugin *plugin)
 {
+
+    gst_element_register(plugin, "proxybin",
+                              GST_RANK_NONE,
+                              GST_TYPE_PROXY_BIN);
+
     gst_element_register(plugin, "dynamictee",
                               GST_RANK_NONE,
                               GST_TYPE_DYNAMIC_TEE);

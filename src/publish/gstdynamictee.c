@@ -1,4 +1,5 @@
 #include "gstdynamictee.h"
+#include "gstproxybin.h"
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -86,9 +87,39 @@ static void gst_dynamic_tee_get_property(GObject *object,
 
 }
 
+static void gst_dynamic_tee_on_element_error (GstElement* proxy, gchar* message, gpointer user_data){
+    GST_DEBUG ("ERROR from element %s with message %s\n", GST_OBJECT_NAME(proxy), message);
+    GstDynamicTee* tee = GST_DYNAMIC_TEE(user_data);  
+    gst_element_set_state(proxy, GST_STATE_NULL);
+    gst_bin_remove(GST_BIN(tee), proxy);
+    
+    
+}
+
+static void gst_dynamic_tee_on_element_eos (GstElement* proxy, gpointer user_data){
+    GST_DEBUG ("EOS from element %s\n", GST_OBJECT_NAME(proxy)); 
+    GstDynamicTee* tee = GST_DYNAMIC_TEE(user_data);  
+    gst_element_set_state(proxy, GST_STATE_NULL);
+    gst_bin_remove(GST_BIN(tee), proxy);
+
+}
+
+
 static gboolean gst_dynamic_tee_start(GstDynamicTee *self, gpointer element_ptr){
   GST_DEBUG("DynamicTee start with new element");
   GstElement* element = GST_ELEMENT(element_ptr);
+  
+  if (GST_IS_PROXY_BIN(element)){
+    GST_DEBUG("Proxy bin detected");
+    g_signal_connect (element, "on-error",
+          G_CALLBACK (gst_dynamic_tee_on_element_error), (gpointer) self);
+
+    g_signal_connect (element, "on-eos",
+          G_CALLBACK (gst_dynamic_tee_on_element_eos), (gpointer) self);
+
+  }
+
+
 
   gst_bin_add(GST_BIN(self), element);
   gst_element_sync_state_with_parent(element);

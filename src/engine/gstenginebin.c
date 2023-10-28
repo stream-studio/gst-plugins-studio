@@ -154,10 +154,15 @@ static gboolean gst_engine_bin_start_record(GstEngineBin *self, gchar* destinati
     gboolean ret = FALSE;
     
     if (!self->recorder){
-      self->recorder = gst_element_factory_make("recordsink", "recorder");
-      g_object_set(self->recorder, "location", destination, NULL);
+      self->recorder = gst_element_factory_make("proxybin", "precorder"); 
+      GstElement *recorder = gst_element_factory_make("recordsink", "recorder");
+      g_object_set(recorder, "location", destination, NULL);
+      g_object_set(self->recorder, "child", recorder, NULL);
+
       g_signal_emit_by_name(self->dtee, "start", self->recorder, &ret);
+      
       ret = TRUE;
+
     }
     
     return ret;
@@ -180,14 +185,16 @@ static gboolean gst_engine_bin_start_stream(GstEngineBin *self, gchar* location,
     gboolean ret = FALSE;
         
     if (!self->streamer){
-      self->streamer = gst_element_factory_make("streamsink", "streamer");
-      g_object_set(self->streamer, "location", location, NULL);
+      self->streamer = gst_element_factory_make("proxybin", "pstreamer");
+      GstElement *streamer = gst_element_factory_make("streamsink", "streamer");
+      g_object_set(streamer, "location", location, NULL);
       if (! g_strcmp0(username, "")){
-        g_object_set(self->streamer, "username", username, NULL);
+        g_object_set(streamer, "username", username, NULL);
       }
       if (! g_strcmp0(password, "")){
-        g_object_set(self->streamer, "password", password, NULL);
+        g_object_set(streamer, "password", password, NULL);
       }      
+      g_object_set(self->streamer, "child", streamer, NULL);
       g_signal_emit_by_name(self->dtee, "start", self->streamer, &ret);
       ret = TRUE;
     }

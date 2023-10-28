@@ -34,6 +34,7 @@ cameragl = library('gstcameragl',
 
 
 publish_sources = [
+    'publish/gstproxybin.c', 
     'publish/gstpublish.c', 
     'publish/gstdynamictee.c', 
     'publish/gstrecordsink.c', 
