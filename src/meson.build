@@ -1,3 +1,5 @@
+pkg = import('pkgconfig')
+
 plugin_c_args = ['-DHAVE_CONFIG_H']
 
 cdata = configuration_data()
@@ -29,6 +31,8 @@ publish = library('gstpublish',
     install_dir : plugins_install_dir,
 )
 
+pkg.generate(publish)
+
 soup_dep = dependency('libsoup-2.4')
 json_dep = dependency('json-glib-1.0')
 webrtc_dep = dependency('gstreamer-webrtc-1.0')
@@ -47,6 +51,8 @@ preview = library('gstpreview',
     install : true,
     install_dir : plugins_install_dir,
 )
+pkg.generate(preview)
+
 
 engine_sources = [
     'engine/gstenginebin.c',
@@ -60,3 +66,4 @@ engine = library('gstengine',
     install : true,
     install_dir : plugins_install_dir,
 )
+pkg.generate(engine)

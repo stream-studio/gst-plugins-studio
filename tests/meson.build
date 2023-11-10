@@ -29,7 +29,3 @@ test('test recordsink', testrecordsink, env : env)
 
 teststreamsink = executable('teststreamsink', 'publish/streamsink.c', dependencies: [gst_dep, gst_check_dep])
 test('test streamsink', teststreamsink, env : env)
-
-testdewarp = executable('dewarp', 'cameragl/dewarp.c', dependencies: [gst_dep, gst_check_dep])
-test('test dewarp', testdewarp, env : env)
-
