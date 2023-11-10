@@ -13,26 +13,6 @@ configure_file(output : 'config.h',
 
 
 
-
-gl_dep = dependency('opengl')
-gstgl_dep = dependency('gstreamer-gl-1.0')
-graphene_dep = dependency('graphene-1.0')
-
-cameragl_sources = [
-    'cameragl/gstcameragl.c',
-    'cameragl/gstdewarp.c',
-]
-
-cameragl = library('gstcameragl',
-    cameragl_sources,
-    dependencies : [gst_dep, gl_dep, gstgl_dep, graphene_dep],
-    c_args: plugin_c_args,
-    install : true,
-    install_dir : plugins_install_dir,
-)
-
-
-
 publish_sources = [
     'publish/gstproxybin.c', 
     'publish/gstpublish.c', 
