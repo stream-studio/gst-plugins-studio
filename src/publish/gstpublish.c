@@ -7,9 +7,15 @@
 #include "gstdynamictee.h"
 #include "gstrecordsink.h"
 #include "gststreamsink.h"
+#include "gstpublishbin.h"
 
 gboolean publish_plugin_init(GstPlugin *plugin)
 {
+
+
+    gst_element_register(plugin, "publishbin",
+                              GST_RANK_NONE,
+                              GST_TYPE_PUBLISH_BIN);
 
     gst_element_register(plugin, "proxybin",
                               GST_RANK_NONE,

@@ -18,6 +18,7 @@ configure_file(output : 'config.h',
 publish_sources = [
     'publish/gstproxybin.c', 
     'publish/gstpublish.c', 
+    'publish/gstpublishbin.c', 
     'publish/gstdynamictee.c', 
     'publish/gstrecordsink.c', 
     'publish/gststreamsink.c',

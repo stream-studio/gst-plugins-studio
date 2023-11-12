@@ -46,10 +46,8 @@ struct _GstEngineBin
   GstElement *qvpreview;
   GstElement *preview;
 
-  GstElement *qvdtee;
-  GstElement *dtee;
-  GstElement *recorder;
-  GstElement *streamer;
+  GstElement *qvpublishtee;
+  GstElement *publish;
 };
 
 G_DEFINE_TYPE(GstEngineBin, gst_engine_bin, GST_TYPE_BIN);
@@ -73,7 +71,7 @@ static void gst_engine_bin_init(GstEngineBin *self)
   self->venctee = gst_element_factory_make("tee", "venctee");
   
   self->qvpreview = gst_element_factory_make("queue", "qvpreview");
-  self->qvdtee = gst_element_factory_make("queue", "qvdtee");
+  self->qvpublishtee = gst_element_factory_make("queue", "qvdtee");
 
 
   self->aacqueue = gst_element_factory_make("queue", "aacqueue");
@@ -84,14 +82,14 @@ static void gst_engine_bin_init(GstEngineBin *self)
   self->opusconvert = gst_element_factory_make("audioconvert", "opusconvert");
   self->opusencoder = gst_element_factory_make("opusenc", "opusenc");
 
-  self->dtee = gst_element_factory_make("dynamictee", "dtee");
-  
+
+  self->publish = gst_element_factory_make("publishbin", "publish");
   self->preview = gst_element_factory_make("previewsink", "preview");
 
 
   gst_bin_add_many(bin, self->vsource, self->vencoder, self->venctee,
                         self->asource, self->atee, self->aacqueue, self->aacconvert, self->aacencoder, self->opusqueue, self->opusconvert, self->opusencoder,
-                        self->dtee, self->qvpreview, self->qvdtee, self->preview, NULL);
+                        self->publish, self->qvpreview, self->qvpublishtee, self->preview, NULL);
   gst_element_link(self->vsource, self->vencoder);
   gst_element_link(self->asource, self->atee);
 
@@ -104,21 +102,19 @@ static void gst_engine_bin_init(GstEngineBin *self)
   gst_caps_unref(caps);
   
   gst_element_link(self->venctee, self->qvpreview);
-  gst_element_link(self->venctee, self->qvdtee);
+  gst_element_link(self->venctee, self->qvpublishtee);
 
 
   gst_element_link_many(self->atee, self->aacqueue, self->aacconvert, self->aacencoder, NULL);
   gst_element_link_many(self->atee, self->opusqueue, self->opusconvert, self->opusencoder, NULL);
 
-  gst_element_link_pads(self->qvdtee, NULL, self->dtee, "video_sink");
-  gst_element_link_pads(self->aacencoder, NULL, self->dtee, "audio_sink");
+  gst_element_link_pads(self->qvpublishtee, NULL, self->publish, "video_sink");
+  gst_element_link_pads(self->aacencoder, NULL, self->publish, "audio_sink");
 
 
   gst_element_link_pads(self->qvpreview, NULL, self->preview, "video_sink");
   gst_element_link_pads(self->opusencoder, NULL, self->preview, "audio_sink");
   
-  self->recorder = NULL;
-  self->streamer = NULL;
 }
 
 static void gst_engine_bin_set_property(GObject *object,
@@ -152,63 +148,26 @@ static void gst_engine_bin_get_property(GObject *object,
 
 static gboolean gst_engine_bin_start_record(GstEngineBin *self, gchar* destination){
     gboolean ret = FALSE;
-    
-    if (!self->recorder){
-      self->recorder = gst_element_factory_make("proxybin", "precorder"); 
-      GstElement *recorder = gst_element_factory_make("recordsink", "recorder");
-      g_object_set(recorder, "location", destination, NULL);
-      g_object_set(self->recorder, "child", recorder, NULL);
-
-      g_signal_emit_by_name(self->dtee, "start", self->recorder, &ret);
-      
-      ret = TRUE;
-
-    }
-    
+    g_signal_emit_by_name(self->publish, "start-record", destination, &ret);
     return ret;
 }
 
 static gboolean gst_engine_bin_stop_record(GstEngineBin *self){
     gboolean ret = FALSE;
-    
-    if (self->recorder){
-      g_signal_emit_by_name(self->dtee, "stop", self->recorder, &ret);
-      self->recorder = NULL;
-      ret = TRUE;
-    }
-        
+    g_signal_emit_by_name(self->publish, "stop-record", &ret);
     return ret;
 }
 
 static gboolean gst_engine_bin_start_stream(GstEngineBin *self, gchar* location, gchar* username, gchar* password){
 
     gboolean ret = FALSE;
-        
-    if (!self->streamer){
-      self->streamer = gst_element_factory_make("proxybin", "pstreamer");
-      GstElement *streamer = gst_element_factory_make("streamsink", "streamer");
-      g_object_set(streamer, "location", location, NULL);
-      if (! g_strcmp0(username, "")){
-        g_object_set(streamer, "username", username, NULL);
-      }
-      if (! g_strcmp0(password, "")){
-        g_object_set(streamer, "password", password, NULL);
-      }      
-      g_object_set(self->streamer, "child", streamer, NULL);
-      g_signal_emit_by_name(self->dtee, "start", self->streamer, &ret);
-      ret = TRUE;
-    }
-    
+    g_signal_emit_by_name(self->publish, "start-stream", location, username, password, &ret);        
     return FALSE;
 }
 
 static gboolean gst_engine_bin_stop_stream(GstEngineBin *self){
   gboolean ret = FALSE;
-    
-  if (self->streamer){
-    g_signal_emit_by_name(self->dtee, "stop", self->streamer, &ret);
-    self->streamer = NULL;
-  }
+  g_signal_emit_by_name(self->publish, "stop-stream", &ret);
 
   return FALSE;
 }
@@ -224,14 +183,14 @@ static void gst_engine_bin_class_init(GstEngineBinClass *klass)
 
   GType record_params[1] = {G_TYPE_STRING};
   gst_engine_bin_signals[SIGNAL_START_RECORD] =
-      g_signal_newv("start_record", G_TYPE_FROM_CLASS(klass),
+      g_signal_newv("start-record", G_TYPE_FROM_CLASS(klass),
                     G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
                     g_cclosure_new(G_CALLBACK(gst_engine_bin_start_record), NULL, NULL),
                     NULL, NULL, NULL, G_TYPE_BOOLEAN,
                     1, record_params); 
 
   gst_engine_bin_signals[SIGNAL_STOP_RECORD] =
-      g_signal_newv("stop_record", G_TYPE_FROM_CLASS(klass),
+      g_signal_newv("stop-record", G_TYPE_FROM_CLASS(klass),
                     G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
                     g_cclosure_new(G_CALLBACK(gst_engine_bin_stop_record), NULL, NULL),
                     NULL, NULL, NULL, G_TYPE_BOOLEAN,
@@ -240,14 +199,14 @@ static void gst_engine_bin_class_init(GstEngineBinClass *klass)
 
   GType streamer_params[3] = {G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING};
   gst_engine_bin_signals[SIGNAL_START_STREAM] =
-      g_signal_newv("start_stream", G_TYPE_FROM_CLASS(klass),
+      g_signal_newv("start-stream", G_TYPE_FROM_CLASS(klass),
                     G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
                     g_cclosure_new(G_CALLBACK(gst_engine_bin_start_stream), NULL, NULL),
                     NULL, NULL, NULL, G_TYPE_BOOLEAN,
                     3, streamer_params); 
 
   gst_engine_bin_signals[SIGNAL_STOP_STREAM] =
-      g_signal_newv("stop_stream", G_TYPE_FROM_CLASS(klass),
+      g_signal_newv("stop-stream", G_TYPE_FROM_CLASS(klass),
                     G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
                     g_cclosure_new(G_CALLBACK(gst_engine_bin_stop_stream), NULL, NULL),
                     NULL, NULL, NULL, G_TYPE_BOOLEAN,

@@ -1,2 +1,2 @@
-option('examples',  type : 'feature', value : 'enabled')
+option('examples',  type : 'feature', value : 'disabled')
 option('tests',  type : 'feature', value : 'enabled')
