@@ -5,3 +5,5 @@ debian/gstreamer1.0-plugins-studio
 debian/files
 debian/gstreamer1.0-plugins-studio.substvars
 debian/debhelper-build-stamp
+.DS_Store
+build

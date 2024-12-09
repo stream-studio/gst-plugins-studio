@@ -104,3 +104,47 @@ dh_auto_configure --buildsystem=meson
 pkg-buildpackage -rfakeroot -us -uc -b
 ```
 
+
+
+ GST_PLUGIN_PATH=$(pwd)/src gst-launch-1.0 videotestsrc is-live=TRUE ! x264enc key-int-max=50 ! h264parse ! previewsink name=p audiotestsrc is-live=TRUE ! opusenc ! p. 
+
+
+ ## MAC OS Instructions 
+
+brew install icu4c@74
+
+Follow these instructions : 
+``` 
+    brew info icu4c@74
+```
+
+```
+==> icu4c@74: stable 74.2 (bottled) [keg-only]
+C/C++ and Java libraries for Unicode and globalization
+https://icu.unicode.org/home
+Deprecated! It will be disabled on 2025-05-01.
+Installed
+/opt/homebrew/Cellar/icu4c@74/74.2 (271 files, 77.9MB)
+  Poured from bottle using the formulae.brew.sh API on 2024-12-09 at 14:20:31
+From: https://github.com/Homebrew/homebrew-core/blob/HEAD/Formula/i/icu4c@74.rb
+License: ICU
+==> Caveats
+icu4c@74 is keg-only, which means it was not symlinked into /opt/homebrew,
+because this is an alternate version of another formula.
+
+If you need to have icu4c@74 first in your PATH, run:
+  echo 'export PATH="/opt/homebrew/opt/icu4c@74/bin:$PATH"' >> /Users/ludovic/.zshrc
+  echo 'export PATH="/opt/homebrew/opt/icu4c@74/sbin:$PATH"' >> /Users/ludovic/.zshrc
+
+For compilers to find icu4c@74 you may need to set:
+  export LDFLAGS="-L/opt/homebrew/opt/icu4c@74/lib"
+  export CPPFLAGS="-I/opt/homebrew/opt/icu4c@74/include"
+
+For pkg-config to find icu4c@74 you may need to set:
+  export PKG_CONFIG_PATH="/opt/homebrew/opt/icu4c@74/lib/pkgconfig"
+```
+
+```
+ ln -s /opt/homebrew/opt/icu4c@74/lib/libicuuc.74.dylib /opt/homebrew/opt/icu4c/lib/libicuuc.74.dylib    
+ ln -s /opt/homebrew/opt/icu4c@74/lib/libicudata.74.dylib /opt/homebrew/opt/icu4c/lib/libicudata.74.dylib
+```

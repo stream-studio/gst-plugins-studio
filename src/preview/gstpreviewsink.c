@@ -338,12 +338,12 @@ create_receiver_entry (GstPreviewSink *self, SoupWebsocketConnection * connectio
   return receiver_entry;
 }
 
-
-
 static void
-soup_websocket_handler (G_GNUC_UNUSED SoupServer * server,
-    SoupWebsocketConnection * connection, G_GNUC_UNUSED const char *path,
-    G_GNUC_UNUSED SoupClientContext * client_context, gpointer user_data)
+soup_websocket_handler (SoupServer *server,
+                        SoupServerMessage       *msg,
+                        const char *path,
+                        SoupWebsocketConnection *connection,
+                        gpointer user_data)
 {
   GstPreviewSink *self = GST_PREVIEW_SINK(user_data);
 
@@ -352,33 +352,36 @@ soup_websocket_handler (G_GNUC_UNUSED SoupServer * server,
   g_signal_connect (G_OBJECT (connection), "closed",
       G_CALLBACK (soup_websocket_closed_cb), (gpointer) self);
 
-
   PreviewSinkReceiverEntry *receiver_entry = create_receiver_entry (self, connection);
   g_hash_table_replace (self->receivers, connection, receiver_entry);
 }
 
 
 
+static gboolean gst_preview_sink_start_server(GstPreviewSink *self)
+{
+  GST_INFO ("Libsoup 3.0 server now listening for connections");
 
-static gboolean gst_preview_sink_start_server(GstPreviewSink *self){
+  self->soup_server = soup_server_new ("server-header", "webrtc-soup-server", NULL);
 
-  GST_INFO ("Libsoup server now listening for connections");
-
-  self->soup_server = soup_server_new (SOUP_SERVER_SERVER_HEADER, "webrtc-soup-server", NULL);
-      
   soup_server_add_websocket_handler (self->soup_server, "/ws", NULL, NULL,
       soup_websocket_handler, (gpointer) self, NULL);
-  
-  soup_server_listen_all (self->soup_server, self->port,
-      (SoupServerListenOptions) 0, NULL);
+
+  if (!soup_server_listen_all (self->soup_server, self->port, 0, NULL)) {
+    GST_ERROR ("Failed to start SoupServer on port %d", self->port);
+    return FALSE;
+  }
 
   return TRUE;
 }
 
 
-static gboolean gst_preview_sink_stop_server(GstPreviewSink *self){
-  
-  g_object_unref (G_OBJECT (self->soup_server));
+static gboolean gst_preview_sink_stop_server(GstPreviewSink *self)
+{
+  if (self->soup_server != NULL) {
+    g_object_unref (G_OBJECT (self->soup_server));
+    self->soup_server = NULL;
+  }
   return TRUE;
 }
 

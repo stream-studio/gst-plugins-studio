@@ -34,7 +34,7 @@ publish = library('gstpublish',
 
 pkg.generate(publish)
 
-soup_dep = dependency('libsoup-2.4')
+soup_dep = dependency('libsoup-3.0')
 json_dep = dependency('json-glib-1.0')
 webrtc_dep = dependency('gstreamer-webrtc-1.0')
 sdp_dep = dependency('gstreamer-sdp-1.0')
