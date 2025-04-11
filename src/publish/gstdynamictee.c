@@ -122,11 +122,13 @@ static gboolean gst_dynamic_tee_start(GstDynamicTee *self, gpointer element_ptr)
 
 
   gst_bin_add(GST_BIN(self), element);
+  gst_element_set_locked_state(element, TRUE);
   gst_element_sync_state_with_parent(element);
   gst_element_link(self->tvideo, element);
   gst_element_link(self->taudio, element);
+  gst_element_set_locked_state(element, FALSE);
   
-  return FALSE;
+  return TRUE;
 }
 
 static GstPadProbeReturn stop_bin_callback (GstPad * pad, GstPadProbeInfo * info, gpointer user_data){
