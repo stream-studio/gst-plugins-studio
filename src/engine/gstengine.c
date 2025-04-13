@@ -3,13 +3,29 @@
 #endif
 
 #include <gst/gst.h>
-#include <engine/gstenginebin.h>
+#include "gstenginebinbase.h"
+#include "gstenginebin.h"
+#include "gsttestsourcenginebin.h"
+#include "gstappsrcenginebin.h"
+#include "gsth264appsrcenginebin.h"
 
 gboolean engine_plugin_init(GstPlugin *plugin)
 {
-    gst_element_register(plugin, "enginebin",
+    if (!gst_element_register(plugin, "testsourcenginebin",
                               GST_RANK_NONE,
-                              GST_TYPE_ENGINE_BIN);     
+                              GST_TYPE_TEST_SRC_ENGINE_BIN)) return FALSE;
+
+    if (!gst_element_register(plugin, "appsrcenginebin",
+                              GST_RANK_NONE,
+                              GST_TYPE_APP_SRC_ENGINE_BIN)) return FALSE;
+
+    if (!gst_element_register(plugin, "h264appsrcenginebin",
+                              GST_RANK_NONE,
+                              GST_TYPE_H264_APP_SRC_ENGINE_BIN)) return FALSE;
+
+    if (!gst_element_register(plugin, "enginebin",
+                              GST_RANK_NONE,
+                              GST_TYPE_ENGINE_BIN)) return FALSE;                              
 
     return TRUE;
 }

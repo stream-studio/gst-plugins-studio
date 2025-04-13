@@ -38,6 +38,7 @@ soup_dep = dependency('libsoup-3.0')
 json_dep = dependency('json-glib-1.0')
 webrtc_dep = dependency('gstreamer-webrtc-1.0')
 sdp_dep = dependency('gstreamer-sdp-1.0')
+gst_app_dep = dependency('gstreamer-app-1.0', version : '>= 1.16')
 
 preview_sources = [
     'preview/gstwebrtcsink.c',
@@ -56,13 +57,18 @@ pkg.generate(preview)
 
 
 engine_sources = [
+    'engine/gstenginebinbase.c',
+    'engine/gsttestsourcenginebin.c',
+    'engine/gsth264appsrcenginebin.c',
+    'engine/gstappsrcenginebin.c',
     'engine/gstenginebin.c',
     'engine/gstengine.c',
+    
 ]
 
 engine = library('gstengine',
     engine_sources,
-    dependencies : [gst_dep],
+    dependencies : [gst_dep, gst_app_dep],
     c_args: plugin_c_args,
     install : true,
     install_dir : plugins_install_dir,
