@@ -100,13 +100,14 @@ soup_websocket_closed_cb (SoupWebsocketConnection * connection,
     receiver_entry = g_hash_table_lookup(self->receivers, connection);
     if (receiver_entry) {
         // Remove from hash table first to prevent any new operations
-        g_hash_table_remove(self->receivers, connection);
+        
         
         // Cleanup resources while still holding the mutex
         cleanup_receiver_entry_resources(receiver_entry);
         if (!receiver_entry->cleaned_up) {
             g_slice_free1(sizeof(PreviewSinkReceiverEntry), receiver_entry);
         }
+        g_hash_table_remove(self->receivers, connection);
 
     }
     g_mutex_unlock(&self->receivers_mutex);
@@ -661,35 +662,30 @@ static void cleanup_receiver_entry_resources(PreviewSinkReceiverEntry *receiver_
     GST_INFO("Cleaning up resources for receiver entry %p", receiver_entry);
     receiver_entry->cleaned_up = TRUE; // ✅ Marque comme nettoyé
 
-    // Déconnexion des signaux
-    if (GST_IS_ELEMENT(receiver_entry->bin)) {
-        g_signal_handlers_disconnect_by_data(receiver_entry->bin, receiver_entry);
-    }
-    if (SOUP_IS_WEBSOCKET_CONNECTION(receiver_entry->connection)) {
-        g_signal_handlers_disconnect_by_data(receiver_entry->connection, receiver_entry);
-    }
+
 
     // 🔻 Stop and free WebRTC bin
     if (GST_IS_ELEMENT(receiver_entry->bin)) {
         GST_INFO("Stopping and cleaning up WebRTC bin %p", receiver_entry->bin);
-        gst_element_set_state(receiver_entry->bin, GST_STATE_NULL);
 
         gboolean result = FALSE;
         if (receiver_entry->parent && receiver_entry->parent->tee) {
             g_signal_emit_by_name(receiver_entry->parent->tee, "stop", receiver_entry->bin, &result);
         }
 
+        gst_element_set_state(receiver_entry->bin, GST_STATE_NULL);
+
         gst_object_unref(receiver_entry->bin);
         receiver_entry->bin = NULL;
     }
 
     // 🔻 Ferme la WebSocket
-    if (SOUP_IS_WEBSOCKET_CONNECTION(receiver_entry->connection)) {
+    /*if (SOUP_IS_WEBSOCKET_CONNECTION(receiver_entry->connection)) {
         GST_INFO("Closing WebSocket connection %p", receiver_entry->connection);
         soup_websocket_connection_close(receiver_entry->connection, SOUP_WEBSOCKET_CLOSE_NORMAL, NULL);
         g_object_unref(receiver_entry->connection);
         receiver_entry->connection = NULL;
-    }
+    }/*/
 }
 
 static void gst_preview_sink_cleanup_all_connections(GstPreviewSink *self)
@@ -814,7 +810,7 @@ static void gst_preview_sink_class_init(GstPreviewSinkClass *klass)
                                                    G_PARAM_READWRITE));
 
   g_object_class_install_property(object_class, PROP_PORT,
-                                  g_param_spec_uint("port", "port",
+                                  g_param_spec_int("port", "port",
                                                    "port", 1, 65535, DEFAULT_PORT,
                                                    G_PARAM_READWRITE));
 
