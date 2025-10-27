@@ -41,7 +41,8 @@ struct _GstPreviewSink
   GstElement* h264parse;
   GstElement* opusparse;
 
-  GstElement* tee;
+  GstElement* vtee;
+  GstElement* atee;
   GHashTable* receivers;
   GMutex receivers_mutex;  // Protects access to receivers hash table
 
@@ -66,7 +67,7 @@ typedef struct{
 G_DEFINE_TYPE(GstPreviewSink, gst_preview_sink, GST_TYPE_BIN);
 
 
-static void cleanup_receiver_entry_resources(PreviewSinkReceiverEntry*);
+static void cleanup_receiver_entry_resources(PreviewSinkReceiverEntry*, gboolean close_connection);
 
 void play_receiver_entry (PreviewSinkReceiverEntry * receiver_entry);
 
@@ -96,24 +97,40 @@ soup_websocket_closed_cb (SoupWebsocketConnection * connection,
     GstPreviewSink *self = GST_PREVIEW_SINK(user_data);
     PreviewSinkReceiverEntry *receiver_entry = NULL;
     
+    GST_INFO("WebSocket connection %p closed callback triggered", connection);
+    
     g_mutex_lock(&self->receivers_mutex);
+    guint connections_before = g_hash_table_size(self->receivers);
+    GST_INFO("Current connections before cleanup: %u", connections_before);
+    
     receiver_entry = g_hash_table_lookup(self->receivers, connection);
     if (receiver_entry) {
-        // Remove from hash table first to prevent any new operations
-        
+        GST_INFO("Found receiver entry %p for closed connection %p", receiver_entry, connection);
         
         // Cleanup resources while still holding the mutex
-        cleanup_receiver_entry_resources(receiver_entry);
+        GST_INFO("Cleaning up resources for receiver entry %p", receiver_entry);
+        cleanup_receiver_entry_resources(receiver_entry, FALSE); // Connection is already closed
+        
         if (!receiver_entry->cleaned_up) {
+            GST_INFO("Freeing receiver entry %p (not marked as cleaned up)", receiver_entry);
             g_slice_free1(sizeof(PreviewSinkReceiverEntry), receiver_entry);
+            GST_INFO("Receiver entry freed");
+        } else {
+            GST_INFO("Receiver entry %p already marked as cleaned up", receiver_entry);
         }
-        g_hash_table_remove(self->receivers, connection);
-
+        
+        GST_INFO("Removing connection %p from hash table", connection);
+        gboolean removed = g_hash_table_remove(self->receivers, connection);
+        GST_INFO("Hash table removal result: %s", removed ? "SUCCESS" : "FAILED");
+    } else {
+        GST_WARNING("No receiver entry found for closed connection %p", connection);
     }
+    
+    guint connections_after = g_hash_table_size(self->receivers);
     g_mutex_unlock(&self->receivers_mutex);
 
-    GST_INFO("Closed WebSocket connection %p, now there is %i active connexions\n", 
-             (gpointer) connection, g_hash_table_size(self->receivers));
+    GST_INFO("Closed WebSocket connection %p, connections: %u -> %u", 
+             connection, connections_before, connections_after);
 }
 
 
@@ -473,6 +490,10 @@ void play_receiver_entry (PreviewSinkReceiverEntry * receiver_entry){
     g_object_set(sender_bin, "stun-server", "stun://stun.l.google.com:19302", NULL);
     GST_DEBUG("Configured STUN server");
 
+    // Add sender_bin to the main previewsink bin
+    gst_bin_add(GST_BIN(self), sender_bin);
+    gst_element_sync_state_with_parent(sender_bin);
+    
     // Store the sender_bin in the receiver entry
     g_mutex_lock(&self->receivers_mutex);
     if (receiver_entry->bin) {
@@ -507,17 +528,63 @@ void play_receiver_entry (PreviewSinkReceiverEntry * receiver_entry){
 
     GST_INFO("Connected WebRTC signals");
 
-    // Start the sender bin
-    gboolean result = FALSE;
-    g_signal_emit_by_name(receiver_entry->parent->tee, "start", sender_bin, &result);
+    // Link sender bin to video and audio tees manually
+    GstPad *vtee_src_pad = gst_element_request_pad_simple(receiver_entry->parent->vtee, "src_%u");
+    GstPad *atee_src_pad = gst_element_request_pad_simple(receiver_entry->parent->atee, "src_%u");
     
-    if (!result) {
-        GST_ERROR("Failed to start WebRTC sender bin");
+    if (!vtee_src_pad || !atee_src_pad) {
+        GST_ERROR("Failed to request source pads from tees");
+        if (vtee_src_pad) {
+            gst_element_release_request_pad(receiver_entry->parent->vtee, vtee_src_pad);
+            gst_object_unref(vtee_src_pad);
+        }
+        if (atee_src_pad) {
+            gst_element_release_request_pad(receiver_entry->parent->atee, atee_src_pad);
+            gst_object_unref(atee_src_pad);
+        }
         gst_object_unref(sender_bin);
         receiver_entry->bin = NULL;
-    } else {
-        GST_INFO("Successfully started WebRTC sender bin");
+        return;
     }
+    
+    GstPad *video_sink_pad = gst_element_get_static_pad(sender_bin, "video_sink");
+    GstPad *audio_sink_pad = gst_element_get_static_pad(sender_bin, "audio_sink");
+    
+    if (!video_sink_pad || !audio_sink_pad) {
+        GST_ERROR("Failed to get sink pads from WebRTC sender bin (video_sink_pad: %p, audio_sink_pad: %p)", video_sink_pad, audio_sink_pad);
+        gst_element_release_request_pad(receiver_entry->parent->vtee, vtee_src_pad);
+        gst_element_release_request_pad(receiver_entry->parent->atee, atee_src_pad);
+        gst_object_unref(vtee_src_pad);
+        gst_object_unref(atee_src_pad);
+        if (video_sink_pad) gst_object_unref(video_sink_pad);
+        if (audio_sink_pad) gst_object_unref(audio_sink_pad);
+        gst_bin_remove(GST_BIN(receiver_entry->parent), sender_bin);
+        receiver_entry->bin = NULL;
+        return;
+    }
+    
+    GstPadLinkReturn video_link_result = gst_pad_link(vtee_src_pad, video_sink_pad);
+    GstPadLinkReturn audio_link_result = gst_pad_link(atee_src_pad, audio_sink_pad);
+    
+    if (video_link_result != GST_PAD_LINK_OK || audio_link_result != GST_PAD_LINK_OK) {
+        GST_ERROR("Failed to link tees to WebRTC sender bin (video_link: %d, audio_link: %d)", video_link_result, audio_link_result);
+        gst_element_release_request_pad(receiver_entry->parent->vtee, vtee_src_pad);
+        gst_element_release_request_pad(receiver_entry->parent->atee, atee_src_pad);
+        gst_object_unref(vtee_src_pad);
+        gst_object_unref(atee_src_pad);
+        gst_object_unref(video_sink_pad);
+        gst_object_unref(audio_sink_pad);
+        gst_bin_remove(GST_BIN(receiver_entry->parent), sender_bin);
+        receiver_entry->bin = NULL;
+        return;
+    }
+    
+    gst_object_unref(vtee_src_pad);
+    gst_object_unref(atee_src_pad);
+    gst_object_unref(video_sink_pad);
+    gst_object_unref(audio_sink_pad);
+    
+    GST_INFO("Successfully linked WebRTC sender bin to video and audio tees");
 }
 
 
@@ -625,15 +692,18 @@ static void gst_preview_sink_init(GstPreviewSink *self)
 
   GST_INFO("Created H264 and Opus parsers");
 
-  self->tee = gst_element_factory_make("dynamictee", "dtee");
+  self->vtee = gst_element_factory_make("tee", "vtee");
+  self->atee = gst_element_factory_make("tee", "atee");
+  g_object_set(self->vtee, "allow-not-linked", TRUE, NULL);
+  g_object_set(self->atee, "allow-not-linked", TRUE, NULL);
   self->receivers = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL,
       destroy_receiver_entry);
 
-  GST_INFO("Created dynamic tee and receiver hash table");
+  GST_INFO("Created video and audio tees and receiver hash table");
 
-  gst_bin_add_many(bin, self->aqueue, self->vqueue, self->h264parse, self->opusparse, self->tee, NULL);
-  gst_element_link_many(self->vqueue, self->h264parse, self->tee, NULL);
-  gst_element_link_many(self->aqueue, self->opusparse, self->tee, NULL);
+  gst_bin_add_many(bin, self->aqueue, self->vqueue, self->h264parse, self->opusparse, self->vtee, self->atee, NULL);
+  gst_element_link_many(self->vqueue, self->h264parse, self->vtee, NULL);
+  gst_element_link_many(self->aqueue, self->opusparse, self->atee, NULL);
 
   GST_INFO("Added and linked elements in bin");
 
@@ -653,57 +723,172 @@ static void gst_preview_sink_init(GstPreviewSink *self)
   GST_INFO("Added ghost pads for audio and video sinks");
 }
 
-static void cleanup_receiver_entry_resources(PreviewSinkReceiverEntry *receiver_entry)
+static void cleanup_receiver_entry_resources(PreviewSinkReceiverEntry *receiver_entry, gboolean close_connection)
 {
     if (!receiver_entry || receiver_entry->cleaned_up) {
         return;
     }
 
-    GST_INFO("Cleaning up resources for receiver entry %p", receiver_entry);
+    GST_INFO("Cleaning up resources for receiver entry %p (close_connection: %s)", receiver_entry, close_connection ? "TRUE" : "FALSE");
     receiver_entry->cleaned_up = TRUE; // ✅ Marque comme nettoyé
 
 
 
-    // 🔻 Stop and free WebRTC bin
     if (GST_IS_ELEMENT(receiver_entry->bin)) {
         GST_INFO("Stopping and cleaning up WebRTC bin %p", receiver_entry->bin);
 
-        gboolean result = FALSE;
-        if (receiver_entry->parent && receiver_entry->parent->tee) {
-            g_signal_emit_by_name(receiver_entry->parent->tee, "stop", receiver_entry->bin, &result);
+        // Find and unlink the tee pads connected to this bin
+        GST_INFO("Finding and unlinking tee pads for WebRTC bin %p", receiver_entry->bin);
+        GstPad *video_sink_pad = gst_element_get_static_pad(receiver_entry->bin, "video_sink");
+        GstPad *audio_sink_pad = gst_element_get_static_pad(receiver_entry->bin, "audio_sink");
+        
+        GST_INFO("Retrieved sink pads: video_sink_pad=%p, audio_sink_pad=%p", video_sink_pad, audio_sink_pad);
+        
+        if (video_sink_pad) {
+            GstPad *vtee_src_pad = gst_pad_get_peer(video_sink_pad);
+            GST_INFO("Video sink pad peer: vtee_src_pad=%p", vtee_src_pad);
+            if (vtee_src_pad) {
+                GST_INFO("Unlinking video pads: %s:%s -> %s:%s", 
+                         GST_DEBUG_PAD_NAME(vtee_src_pad), GST_DEBUG_PAD_NAME(video_sink_pad));
+                gboolean unlink_result = gst_pad_unlink(vtee_src_pad, video_sink_pad);
+                GST_INFO("Video pad unlink result: %s", unlink_result ? "SUCCESS" : "FAILED");
+                
+                GST_INFO("Releasing request pad %s:%s from vtee", GST_DEBUG_PAD_NAME(vtee_src_pad));
+                gst_element_release_request_pad(receiver_entry->parent->vtee, vtee_src_pad);
+                GST_INFO("Released video tee request pad");
+                
+                gst_object_unref(vtee_src_pad);
+                GST_INFO("Unreferenced video tee source pad");
+            } else {
+                GST_WARNING("Video sink pad has no peer - may already be unlinked");
+            }
+            gst_object_unref(video_sink_pad);
+            GST_INFO("Unreferenced video sink pad");
+        } else {
+            GST_WARNING("Could not get video sink pad from WebRTC bin");
+        }
+        
+        if (audio_sink_pad) {
+            GstPad *atee_src_pad = gst_pad_get_peer(audio_sink_pad);
+            GST_INFO("Audio sink pad peer: atee_src_pad=%p", atee_src_pad);
+            if (atee_src_pad) {
+                GST_INFO("Unlinking audio pads: %s:%s -> %s:%s", 
+                         GST_DEBUG_PAD_NAME(atee_src_pad), GST_DEBUG_PAD_NAME(audio_sink_pad));
+                gboolean unlink_result = gst_pad_unlink(atee_src_pad, audio_sink_pad);
+                GST_INFO("Audio pad unlink result: %s", unlink_result ? "SUCCESS" : "FAILED");
+                
+                GST_INFO("Releasing request pad %s:%s from atee", GST_DEBUG_PAD_NAME(atee_src_pad));
+                gst_element_release_request_pad(receiver_entry->parent->atee, atee_src_pad);
+                GST_INFO("Released audio tee request pad");
+                
+                gst_object_unref(atee_src_pad);
+                GST_INFO("Unreferenced audio tee source pad");
+            } else {
+                GST_WARNING("Audio sink pad has no peer - may already be unlinked");
+            }
+            gst_object_unref(audio_sink_pad);
+            GST_INFO("Unreferenced audio sink pad");
+        } else {
+            GST_WARNING("Could not get audio sink pad from WebRTC bin");
         }
 
-        gst_element_set_state(receiver_entry->bin, GST_STATE_NULL);
+        // Explicit webrtcbin cleanup before bin removal
+        GST_INFO("Looking for webrtcbin element in WebRTC sink %p", receiver_entry->bin);
+        GstElement *webrtcbin = gst_bin_get_by_name(GST_BIN(receiver_entry->bin), "webrtcbin0");
+        if (webrtcbin) {
+            GST_INFO("Found webrtcbin element %p, disconnecting signals and cleaning up", webrtcbin);
+            
+            // Disconnect all signal handlers from webrtcbin to prevent callbacks during cleanup
+            GST_INFO("Disconnecting all signal handlers from webrtcbin %p", webrtcbin);
+            g_signal_handlers_disconnect_by_data(webrtcbin, receiver_entry->bin);
+            
+            // Set webrtcbin to NULL state before parent bin cleanup (synchronous)
+            GST_INFO("Setting webrtcbin %p state to NULL synchronously", webrtcbin);
+            GstStateChangeReturn ret = gst_element_set_state(webrtcbin, GST_STATE_NULL);
+            if (ret == GST_STATE_CHANGE_ASYNC) {
+                GST_INFO("Waiting for webrtcbin %p state change to complete", webrtcbin);
+                ret = gst_element_get_state(webrtcbin, NULL, NULL, 2 * GST_SECOND);
+                GST_INFO("Webrtcbin %p state change result: %s", webrtcbin, gst_element_state_change_return_get_name(ret));
+            }
+            
+            gst_object_unref(webrtcbin);
+            GST_INFO("Webrtcbin signals disconnected and state set to NULL");
+        } else {
+            GST_WARNING("Could not find webrtcbin element for explicit cleanup");
+        }
 
-        gst_object_unref(receiver_entry->bin);
+        // Force dispose on WebRTC sink to trigger early cleanup
+        GST_INFO("Force disposing WebRTC sink %p to trigger early cleanup", receiver_entry->bin);
+        GObject *webrtc_sink_obj = G_OBJECT(receiver_entry->bin);
+        if (G_IS_OBJECT(webrtc_sink_obj)) {
+            g_object_run_dispose(webrtc_sink_obj);
+            GST_INFO("WebRTC sink dispose completed");
+        }
+
+        GST_INFO("Setting WebRTC bin %p state to NULL", receiver_entry->bin);
+        GstStateChangeReturn state_ret = gst_element_set_state(receiver_entry->bin, GST_STATE_NULL);
+        GST_INFO("WebRTC bin state change result: %s", gst_element_state_change_return_get_name(state_ret));
+        
+        GST_INFO("Removing WebRTC bin %p from parent bin %p", receiver_entry->bin, receiver_entry->parent);
+        gboolean remove_result = gst_bin_remove(GST_BIN(receiver_entry->parent), receiver_entry->bin);
+        GST_INFO("WebRTC bin removal result: %s", remove_result ? "SUCCESS" : "FAILED");
+        
+        GST_INFO("Setting receiver_entry->bin to NULL");
         receiver_entry->bin = NULL;
     }
 
-    // 🔻 Ferme la WebSocket
-    /*if (SOUP_IS_WEBSOCKET_CONNECTION(receiver_entry->connection)) {
-        GST_INFO("Closing WebSocket connection %p", receiver_entry->connection);
-        soup_websocket_connection_close(receiver_entry->connection, SOUP_WEBSOCKET_CLOSE_NORMAL, NULL);
+    if (SOUP_IS_WEBSOCKET_CONNECTION(receiver_entry->connection)) {
+        SoupWebsocketState conn_state = soup_websocket_connection_get_state(receiver_entry->connection);
+        GST_INFO("WebSocket connection %p current state: %d", receiver_entry->connection, conn_state);
+        
+        if (close_connection && conn_state == SOUP_WEBSOCKET_STATE_OPEN) {
+            GST_INFO("Actively closing open WebSocket connection %p", receiver_entry->connection);
+            soup_websocket_connection_close(receiver_entry->connection, SOUP_WEBSOCKET_CLOSE_NORMAL, NULL);
+            GST_INFO("WebSocket connection close request sent");
+        } else {
+            GST_INFO("Not closing WebSocket connection %p (close_connection: %s, state: %d)", 
+                     receiver_entry->connection, close_connection ? "TRUE" : "FALSE", conn_state);
+        }
+        
+        GST_INFO("Unreferencing WebSocket connection %p", receiver_entry->connection);
         g_object_unref(receiver_entry->connection);
+        GST_INFO("WebSocket connection unreferenced");
         receiver_entry->connection = NULL;
-    }/*/
+    } else {
+        GST_WARNING("receiver_entry->connection is not a valid WebSocket connection");
+    }
 }
 
 static void gst_preview_sink_cleanup_all_connections(GstPreviewSink *self)
 {
     GHashTableIter iter;
     gpointer key, value;
+    guint connection_count = 0;
 
     GST_INFO("Cleaning up all connections");
 
     g_mutex_lock(&self->receivers_mutex);
+    connection_count = g_hash_table_size(self->receivers);
+    GST_INFO("Found %u connections to clean up", connection_count);
+    
     g_hash_table_iter_init(&iter, self->receivers);
+    guint cleaned = 0;
     while (g_hash_table_iter_next(&iter, &key, &value)) {
         PreviewSinkReceiverEntry *entry = (PreviewSinkReceiverEntry *)value;
-        cleanup_receiver_entry_resources(entry);
+        GST_INFO("Cleaning up connection %u/%u: entry=%p, connection=%p, bin=%p", 
+                 ++cleaned, connection_count, entry, entry ? entry->connection : NULL, entry ? entry->bin : NULL);
+        cleanup_receiver_entry_resources(entry, TRUE); // Actively close connections
+        GST_INFO("Freeing receiver entry %p", entry);
         g_slice_free1(sizeof(PreviewSinkReceiverEntry), entry);
+        GST_INFO("Receiver entry freed");
     }
+    
+    GST_INFO("Removing all entries from hash table");
     g_hash_table_remove_all(self->receivers);
+    GST_INFO("Hash table cleared, final size: %u", g_hash_table_size(self->receivers));
     g_mutex_unlock(&self->receivers_mutex);
+    
+    GST_INFO("All connections cleanup completed");
 }
 
 static GstStateChangeReturn gst_preview_sink_change_state(GstElement *element, GstStateChange transition)
