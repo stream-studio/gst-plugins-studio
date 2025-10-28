@@ -286,31 +286,15 @@ static void gst_webrtc_sink_init(GstWebrtcSink *self)
   */
   GST_INFO("Connecting WebRTC signals");
 
-  // Connect negotiation needed signal
-  signal_id = g_signal_connect (self->webrtcbin, "on-negotiation-needed",
-      G_CALLBACK (on_negotiation_needed_cb), (gpointer) self);
-  if (signal_id == 0) {
-    GST_ERROR("Failed to connect negotiation needed signal - signal not found");
-  } else {
-    GST_DEBUG("Connected negotiation needed signal with ID %lu", signal_id);
-  }
+  
+  g_signal_connect (self->webrtcbin, "on-negotiation-needed", 
+    G_CALLBACK (on_negotiation_needed_cb), (gpointer) self);
 
-  // Connect ICE candidate signal
-  signal_id = g_signal_connect (self->webrtcbin, "on-ice-candidate",
-      G_CALLBACK (on_ice_candidate_cb), (gpointer) self);
-  if (signal_id == 0) {
-    GST_ERROR("Failed to connect ICE candidate signal - signal not found");
-  } else {
-    GST_DEBUG("Connected ICE candidate signal with ID %lu", signal_id);
-  }
+  g_signal_connect (self->webrtcbin, "on-ice-candidate", 
+    G_CALLBACK (on_ice_candidate_cb), (gpointer) self);
 
-  // Verify signal existence
-  if (!g_signal_lookup("on-negotiation-needed", G_OBJECT_TYPE(self->webrtcbin))) {
-    GST_WARNING("on-negotiation-needed signal not found on webrtcbin");
-  }
-  if (!g_signal_lookup("on-ice-candidate", G_OBJECT_TYPE(self->webrtcbin))) {
-    GST_WARNING("on-ice-candidate signal not found on webrtcbin");
-  }
+
+
 
   GST_INFO("WebRTC signal connection completed");
 
@@ -324,12 +308,6 @@ static void gst_webrtc_sink_init(GstWebrtcSink *self)
 
   GST_INFO("Added ghost pads for audio and video sinks");
 
-  if (signal_id == 0) {
-    GST_ERROR("Failed to connect on-sdp-offer signal");
-    gst_object_unref(self->webrtcbin);
-    self->webrtcbin = NULL;
-    return;
-  }
 }
 
 static void gst_webrtc_sink_set_property(GObject *object,

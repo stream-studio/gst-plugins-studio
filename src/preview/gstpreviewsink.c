@@ -792,46 +792,15 @@ static void cleanup_receiver_entry_resources(PreviewSinkReceiverEntry *receiver_
             GST_WARNING("Could not get audio sink pad from WebRTC bin");
         }
 
-        // Explicit webrtcbin cleanup before bin removal
-        GST_INFO("Looking for webrtcbin element in WebRTC sink %p", receiver_entry->bin);
-        GstElement *webrtcbin = gst_bin_get_by_name(GST_BIN(receiver_entry->bin), "webrtcbin0");
-        if (webrtcbin) {
-            GST_INFO("Found webrtcbin element %p, disconnecting signals and cleaning up", webrtcbin);
-            
-            // Disconnect all signal handlers from webrtcbin to prevent callbacks during cleanup
-            GST_INFO("Disconnecting all signal handlers from webrtcbin %p", webrtcbin);
-            g_signal_handlers_disconnect_by_data(webrtcbin, receiver_entry->bin);
-            
-            // Set webrtcbin to NULL state before parent bin cleanup (synchronous)
-            GST_INFO("Setting webrtcbin %p state to NULL synchronously", webrtcbin);
-            GstStateChangeReturn ret = gst_element_set_state(webrtcbin, GST_STATE_NULL);
-            if (ret == GST_STATE_CHANGE_ASYNC) {
-                GST_INFO("Waiting for webrtcbin %p state change to complete", webrtcbin);
-                ret = gst_element_get_state(webrtcbin, NULL, NULL, 2 * GST_SECOND);
-                GST_INFO("Webrtcbin %p state change result: %s", webrtcbin, gst_element_state_change_return_get_name(ret));
-            }
-            
-            gst_object_unref(webrtcbin);
-            GST_INFO("Webrtcbin signals disconnected and state set to NULL");
-        } else {
-            GST_WARNING("Could not find webrtcbin element for explicit cleanup");
-        }
-
-        // Force dispose on WebRTC sink to trigger early cleanup
-        GST_INFO("Force disposing WebRTC sink %p to trigger early cleanup", receiver_entry->bin);
-        GObject *webrtc_sink_obj = G_OBJECT(receiver_entry->bin);
-        if (G_IS_OBJECT(webrtc_sink_obj)) {
-            g_object_run_dispose(webrtc_sink_obj);
-            GST_INFO("WebRTC sink dispose completed");
-        }
+        GST_INFO("Removing WebRTC bin %p from parent bin %p", receiver_entry->bin, receiver_entry->parent);
+        gboolean remove_result = gst_bin_remove(GST_BIN(receiver_entry->parent), receiver_entry->bin);
+        GST_INFO("WebRTC bin removal result: %s", remove_result ? "SUCCESS" : "FAILED");
 
         GST_INFO("Setting WebRTC bin %p state to NULL", receiver_entry->bin);
         GstStateChangeReturn state_ret = gst_element_set_state(receiver_entry->bin, GST_STATE_NULL);
         GST_INFO("WebRTC bin state change result: %s", gst_element_state_change_return_get_name(state_ret));
         
-        GST_INFO("Removing WebRTC bin %p from parent bin %p", receiver_entry->bin, receiver_entry->parent);
-        gboolean remove_result = gst_bin_remove(GST_BIN(receiver_entry->parent), receiver_entry->bin);
-        GST_INFO("WebRTC bin removal result: %s", remove_result ? "SUCCESS" : "FAILED");
+
         
         GST_INFO("Setting receiver_entry->bin to NULL");
         receiver_entry->bin = NULL;
