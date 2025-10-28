@@ -482,9 +482,7 @@ void play_receiver_entry (PreviewSinkReceiverEntry * receiver_entry){
     }
     
     GST_DEBUG("Created webrtcsink element %p", sender_bin);
-    
-    // Take ownership of the sender_bin
-    gst_object_ref_sink(sender_bin);
+        
     
     // TODO - receive STUN + TURN from peer
     g_object_set(sender_bin, "stun-server", "stun://stun.l.google.com:19302", NULL);
@@ -792,13 +790,13 @@ static void cleanup_receiver_entry_resources(PreviewSinkReceiverEntry *receiver_
             GST_WARNING("Could not get audio sink pad from WebRTC bin");
         }
 
-        GST_INFO("Removing WebRTC bin %p from parent bin %p", receiver_entry->bin, receiver_entry->parent);
-        gboolean remove_result = gst_bin_remove(GST_BIN(receiver_entry->parent), receiver_entry->bin);
-        GST_INFO("WebRTC bin removal result: %s", remove_result ? "SUCCESS" : "FAILED");
-
         GST_INFO("Setting WebRTC bin %p state to NULL", receiver_entry->bin);
         GstStateChangeReturn state_ret = gst_element_set_state(receiver_entry->bin, GST_STATE_NULL);
         GST_INFO("WebRTC bin state change result: %s", gst_element_state_change_return_get_name(state_ret));
+        
+        GST_INFO("Removing WebRTC bin %p from parent bin %p", receiver_entry->bin, receiver_entry->parent);
+        gboolean remove_result = gst_bin_remove(GST_BIN(receiver_entry->parent), receiver_entry->bin);
+        GST_INFO("WebRTC bin removal result: %s", remove_result ? "SUCCESS" : "FAILED");
         
 
         

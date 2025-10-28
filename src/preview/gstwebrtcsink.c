@@ -437,30 +437,6 @@ static void gst_webrtc_sink_dispose(GObject *object)
 {
   GstWebrtcSink *self = GST_WEBRTC_SINK(object);
 
-  GST_INFO("Disposing WebRTC sink %p", self);
-
-  // Comprehensive webrtcbin cleanup to prevent file descriptor leaks
-  if (self->webrtcbin) {
-    GST_INFO("Comprehensive webrtcbin %p cleanup during dispose", self->webrtcbin);
-    
-    // Disconnect all signal handlers to prevent callbacks during cleanup
-    GST_INFO("Disconnecting all signal handlers from webrtcbin %p", self->webrtcbin);
-    g_signal_handlers_disconnect_by_data(self->webrtcbin, self);
-    
-    // Force synchronous state change to NULL with timeout
-    GST_INFO("Setting webrtcbin %p state to NULL synchronously with timeout", self->webrtcbin);
-    GstStateChangeReturn ret = gst_element_set_state(self->webrtcbin, GST_STATE_NULL);
-    if (ret == GST_STATE_CHANGE_ASYNC) {
-      GST_INFO("Waiting for webrtcbin %p state change to complete", self->webrtcbin);
-      ret = gst_element_get_state(self->webrtcbin, NULL, NULL, 2 * GST_SECOND);
-      GST_INFO("Webrtcbin %p state change result: %s", self->webrtcbin, gst_element_state_change_return_get_name(ret));
-    }
-    
-    // Clear the reference
-    self->webrtcbin = NULL;
-    GST_INFO("WebRTC bin comprehensively cleaned up and nullified in dispose");
-  }
-
   GST_INFO("WebRTC sink dispose completed");
 
   G_OBJECT_CLASS(gst_webrtc_sink_parent_class)->dispose(object);
@@ -471,15 +447,6 @@ static void gst_webrtc_sink_finalize(GObject *object)
   GstWebrtcSink *self = GST_WEBRTC_SINK(object);
 
   GST_INFO("Finalizing WebRTC sink %p", self);
-
-  // Additional safety check - webrtcbin should already be NULL from dispose
-  if (self->webrtcbin) {
-    GST_WARNING("WebRTC bin %p still exists in finalize - this should not happen", self->webrtcbin);
-    self->webrtcbin = NULL;
-  }
-
-  GST_INFO("WebRTC sink finalization completed");
-
   G_OBJECT_CLASS(gst_webrtc_sink_parent_class)->finalize(object);
 }
 
